@@ -13,6 +13,7 @@ pub enum MoneyError {
 }
 
 impl Money {
+
     pub fn new(amount: BigDecimal, currency: CurrencyCode) -> Self {
         let a = amount.with_scale(currency.digit().map(|v| v as i64).unwrap_or(0i64));
         Self { amount: a, currency }
@@ -73,13 +74,15 @@ impl Money {
 mod tests {
     use crate::money::{MoneyError, Money};
     use iso_4217::CurrencyCode;
+    use bigdecimal::BigDecimal;
 
     #[test]
     fn test_add() -> Result<(), MoneyError> {
-        let m1 = Money::from_u64(1, CurrencyCode::JPY);
-        let m2 = Money::from_u64(2, CurrencyCode::JPY);
+        let m1 = Money::from_u64(1, CurrencyCode::USD);
+        let m2 = Money::from_u64(2, CurrencyCode::USD);
         let m3 = m1.add(m2)?;
         println!("{:?}", m3);
+        assert_eq!(m3, Money::new(BigDecimal::from(3), CurrencyCode::USD));
         Ok(())
     }
 }
