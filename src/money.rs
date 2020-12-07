@@ -1,4 +1,3 @@
-use std::ops::{Add, Div, Mul, Neg};
 
 use bigdecimal::{BigDecimal, Zero};
 use iso_4217::CurrencyCode;
@@ -46,14 +45,14 @@ impl Money {
     }
 
     pub fn negated(self) -> Self {
-        Self { amount: self.amount.neg(), currency: self.currency }
+        Self { amount: -self.amount, currency: self.currency }
     }
 
     pub fn add(self, other: Self) -> Result<Self, MoneyError> {
         if self.currency != other.currency {
             Err(MoneyError::NotSameCurrencyError)
         } else {
-            Ok(Self { amount: self.amount.add(other.amount), currency: self.currency })
+            Ok(Self { amount: self.amount + other.amount, currency: self.currency })
         }
     }
 
@@ -62,11 +61,11 @@ impl Money {
     }
 
     pub fn times(self, factor: BigDecimal) -> Self {
-        Self { amount: self.amount.mul(factor), currency: self.currency }
+        Self { amount: self.amount * factor, currency: self.currency }
     }
 
     pub fn divided_by(self, divisor: BigDecimal) -> Self {
-        Self { amount: self.amount.div(divisor), currency: self.currency }
+        Self { amount: self.amount / divisor, currency: self.currency }
     }
 }
 
