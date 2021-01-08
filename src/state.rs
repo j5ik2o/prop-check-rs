@@ -47,22 +47,22 @@ impl RNG {
     if count == 0 {
       (vec![], self)
     } else {
-      let (x, r1) = self.next_int();
-      let (mut xs, r2) = r1.ints1(count - 1);
-      let mut xl = vec![x];
-      xs.append(&mut xl);
-      (xs, r2)
+      let (x, new_rng) = self.next_int();
+      let (mut acc, new_rng) = new_rng.ints1(count - 1);
+      let mut xs = vec![x];
+      acc.append(&mut xs);
+      (acc, new_rng)
     }
   }
 
   pub fn ints2(self, count: i32) -> (Vec<i32>, Self) {
-    fn go(count: i32, r: RNG, mut xs: Vec<i32>) -> (Vec<i32>, RNG) {
+    fn go(count: i32, rng: RNG, mut acc: Vec<i32>) -> (Vec<i32>, RNG) {
       if count == 0 {
-        (xs, r)
+        (acc, rng)
       } else {
-        let (x, r2) = r.next_int();
-        xs.push(x);
-        go(count - 1, r2, xs)
+        let (x, new_rng) = rng.next_int();
+        acc.push(x);
+        go(count - 1, new_rng, acc)
       }
     }
     go(count, self, vec![])
@@ -70,15 +70,15 @@ impl RNG {
 
   pub fn ints3(self, count: i32) -> (Vec<i32>, Self) {
     let mut index = count;
-    let mut result = vec![];
+    let mut acc = vec![];
     let mut current_rng = self;
     while index > 0 {
       let (x, new_rng) = current_rng.next_int();
-      result.push(x);
+      acc.push(x);
       index = index -1;
       current_rng = new_rng;
     }
-    (result, current_rng)
+    (acc, current_rng)
   }
 
 
