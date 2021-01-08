@@ -43,7 +43,7 @@ impl RNG {
     ((d1, d2, d3), r3)
   }
 
-  pub fn ints1(self, count: i32) -> (Vec<i32>, Self) {
+  pub fn ints1(self, count: u32) -> (Vec<i32>, Self) {
     if count == 0 {
       (vec![], self)
     } else {
@@ -55,8 +55,8 @@ impl RNG {
     }
   }
 
-  pub fn ints2(self, count: i32) -> (Vec<i32>, Self) {
-    fn go(count: i32, rng: RNG, mut acc: Vec<i32>) -> (Vec<i32>, RNG) {
+  pub fn ints2(self, count: u32) -> (Vec<i32>, Self) {
+    fn go(count: u32, rng: RNG, mut acc: Vec<i32>) -> (Vec<i32>, RNG) {
       if count == 0 {
         (acc, rng)
       } else {
@@ -68,7 +68,7 @@ impl RNG {
     go(count, self, vec![])
   }
 
-  pub fn ints3(self, count: i32) -> (Vec<i32>, Self) {
+  pub fn ints3(self, count: u32) -> (Vec<i32>, Self) {
     let mut index = count;
     let mut acc = vec![];
     let mut current_rng = self;
@@ -157,7 +157,7 @@ impl RNG {
     result
   }
 
-  pub fn _ints(count: i32) -> BoxRand<Vec<i32>> {
+  pub fn ints_f(count: u32) -> BoxRand<Vec<i32>> {
     let mut v: Vec<Box<DynRand<i32>>> = Vec::with_capacity(count as usize);
     v.resize_with(count as usize, || Self::int_value());
     Self::sequence(v)
