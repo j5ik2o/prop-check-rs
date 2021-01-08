@@ -2,6 +2,7 @@
 
 use crate::state::RNG;
 
+mod prop;
 mod state;
 
 const COUNT: u32 = 100000000;
