@@ -49,8 +49,7 @@ impl RNG {
     } else {
       let (x, new_rng) = self.next_int();
       let (mut acc, new_rng) = new_rng.ints1(count - 1);
-      let mut xs = vec![x];
-      acc.append(&mut xs);
+      acc.push(x);
       (acc, new_rng)
     }
   }
