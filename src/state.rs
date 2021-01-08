@@ -50,8 +50,8 @@ impl RNG {
       let (x, r1) = self.next_int();
       let (mut xs, r2) = r1.ints1(count - 1);
       let mut xl = vec![x];
-      xl.append(&mut xs);
-      (xl, r2)
+      xs.append(&mut xl);
+      (xs, r2)
     }
   }
 
@@ -61,9 +61,8 @@ impl RNG {
         (xs, r)
       } else {
         let (x, r2) = r.next_int();
-        let mut xl = vec![x];
-        xl.append(&mut xs);
-        go(count - 1, r2, xl)
+        xs.push(x);
+        go(count - 1, r2, xs)
       }
     }
     go(count, self, vec![])
