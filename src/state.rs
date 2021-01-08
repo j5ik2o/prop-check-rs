@@ -232,8 +232,8 @@ mod state {
     run: Box<dyn Fn(S) -> (A, S) + 'a>,
   }
 
-  impl<'a, S: Clone, A: Clone> State<'a, S, A> {
-    pub fn pure<'x, X: Clone + 'x>(x: X) -> State<'x, S, X> {
+  impl<'a, S, A> State<'a, S, A> {
+    pub fn pure<'b, X: Clone + 'b>(x: X) -> State<'b, S, X> {
       State {
         run: box move |s| { (x.clone(), s) },
       }
