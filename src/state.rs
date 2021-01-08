@@ -1,5 +1,15 @@
-pub trait NextInt {
-  fn next_int(&self) -> (i32, Self);
+pub trait NextRandValue {
+  fn next_i32(&self) -> (i32, Self);
+
+  fn next_u32(&self) -> (u32, Self) where Self: Sized {
+    let (i, r) = self.next_i32();
+    (if i < 0 { -(i + 1) as u32 } else { i as u32 }, r)
+  }
+
+  fn next_f32(&self) -> (f32, Self) where Self: Sized {
+    let (i, r) = self.next_i32();
+    (i as f32 / (std::i32::MAX as f32 + 1.0f32), r)
+  }
 }
 
 #[derive(Clone, Debug)]
@@ -10,24 +20,23 @@ pub struct RNG {
 type DynRand<A> = dyn Fn(RNG) -> (A, RNG);
 type BoxRand<A> = Box<DynRand<A>>;
 
+impl NextRandValue for RNG {
+  fn next_i32(&self) -> (i32, Self) {
+    let new_seed = self.seed.wrapping_mul(0x5DEECE66D) & 0xFFFFFFFFFFFF;
+    let next_rng = RNG { seed: new_seed };
+    let n = (new_seed >> 16) as i32;
+    (n, next_rng)
+  }
+}
+
 impl RNG {
   pub fn new() -> Self {
     RNG { seed: i64::MAX }
   }
 
-  pub fn non_negative_int(&self) -> (i32, Self) {
-    let (i, r) = self.next_int();
-    (if i < 0 { -(i + 1) } else { i }, r)
-  }
-
-  pub fn double(&self) -> (f32, Self) {
-    let (i, r) = self.next_int();
-    (i as f32 / (std::i32::MAX as f32 + 1.0f32), r)
-  }
-
   pub fn int_double(&self) -> ((i32, f32), Self) {
-    let (i, r1) = self.next_int();
-    let (d, r2) = r1.double();
+    let (i, r1) = self.next_i32();
+    let (d, r2) = r1.next_f32();
     ((i, d), r2)
   }
 
@@ -37,9 +46,9 @@ impl RNG {
   }
 
   pub fn double_3(&self) -> ((f32, f32, f32), Self) {
-    let (d1, r1) = self.double();
-    let (d2, r2) = r1.double();
-    let (d3, r3) = r2.double();
+    let (d1, r1) = self.next_f32();
+    let (d2, r2) = r1.next_f32();
+    let (d3, r3) = r2.next_f32();
     ((d1, d2, d3), r3)
   }
 
@@ -47,7 +56,7 @@ impl RNG {
     if count == 0 {
       (vec![], self)
     } else {
-      let (x, new_rng) = self.next_int();
+      let (x, new_rng) = self.next_i32();
       let (mut acc, new_rng) = new_rng.ints1(count - 1);
       acc.push(x);
       (acc, new_rng)
@@ -59,7 +68,7 @@ impl RNG {
       if count == 0 {
         (acc, rng)
       } else {
-        let (x, new_rng) = rng.next_int();
+        let (x, new_rng) = rng.next_i32();
         acc.push(x);
         go(count - 1, new_rng, acc)
       }
@@ -72,7 +81,7 @@ impl RNG {
     let mut acc = vec![];
     let mut current_rng = self;
     while index > 0 {
-      let (x, new_rng) = current_rng.next_int();
+      let (x, new_rng) = current_rng.next_i32();
       acc.push(x);
       index -= 1;
       current_rng = new_rng;
@@ -96,7 +105,7 @@ impl RNG {
   {
     let unit = Self::unit(Vec::<A>::new());
     let result = fs.into_iter().fold(unit, |acc, e| {
-      Self::map2(acc, e,  |mut a, b| {
+      Self::map2(acc, e, |mut a, b| {
         a.push(b);
         a
       })
@@ -105,7 +114,7 @@ impl RNG {
   }
 
   pub fn int_value() -> BoxRand<i32> {
-    Box::new(move |rng: RNG| rng.next_int())
+    Box::new(move |rng: RNG| rng.next_i32())
   }
 
   pub fn map<A, B, F1, F2>(s: F1, f: F2) -> BoxRand<B>
@@ -122,7 +131,7 @@ impl RNG {
   pub fn double_value() -> BoxRand<f32> {
     Self::map(
       |rng| {
-        let result = rng.non_negative_int();
+        let result = rng.next_u32();
         result
       },
       |x| {
@@ -174,9 +183,9 @@ impl RNG {
     })
   }
 
-  pub fn non_negative_less_than(n: i32) -> BoxRand<i32> {
+  pub fn non_negative_less_than(n: u32) -> BoxRand<u32> {
     Self::flat_map(
-      |rng| rng.non_negative_int(),
+      |rng| rng.next_u32(),
       move |i| {
         let m = i % n;
         if i + (n - 1) - m >= 0 {
@@ -217,17 +226,9 @@ impl RNG {
   // }
 }
 
-impl NextInt for RNG {
-  fn next_int(&self) -> (i32, Self) {
-    let new_seed = self.seed.wrapping_mul(0x5DEECE66D) & 0xFFFFFFFFFFFF;
-    let next_rng = RNG { seed: new_seed };
-    let n = (new_seed >> 16) as i32;
-    (n, next_rng)
-  }
-}
 
 mod state {
-  use crate::state::{NextInt, RNG};
+  use crate::state::RNG;
 
   struct State<S, A> {
     run: Box<dyn Fn(S) -> (A, S)>,
