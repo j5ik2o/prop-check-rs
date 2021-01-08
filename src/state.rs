@@ -100,7 +100,7 @@ impl RNG {
   pub fn double_value() -> BoxRand<f32> {
     Self::map(
       |rng| {
-        let result = Self::non_negative_int(&rng);
+        let result = rng.non_negative_int();
         result
       },
       |x| {
