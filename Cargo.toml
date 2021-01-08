@@ -10,6 +10,6 @@ edition = "2018"
 bigdecimal = "0.2.0"
 iso-4217 = "0.1"
 num-bigint = "0.3"
-rust-fp-categories = "0.0.1"
+rust-fp-categories = "0.0.5"
 futures = { verison = "0.3.1", features = ["thread-pool"] }
 # tokio = { version = "1", features = ["full"] }

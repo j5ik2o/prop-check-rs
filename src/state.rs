@@ -114,7 +114,11 @@ impl RNG {
   }
 
   pub fn int_value() -> BoxRand<i32> {
-    Box::new(move |rng: RNG| rng.next_i32())
+    Box::new(move |rng | rng.next_i32())
+  }
+
+  pub fn double_value() -> BoxRand<f32> {
+    Box::new(move |rng| rng.next_f32())
   }
 
   pub fn map<A, B, F1, F2>(s: F1, f: F2) -> BoxRand<B>
@@ -126,19 +130,6 @@ impl RNG {
       let (a, rng2) = s(rng);
       (f(a), rng2)
     })
-  }
-
-  pub fn double_value() -> BoxRand<f32> {
-    Self::map(
-      |rng| {
-        let result = rng.next_u32();
-        result
-      },
-      |x| {
-        let result = x as f32 / (i32::MAX as f32 + 1.0f32);
-        result
-      },
-    )
   }
 
   pub fn map2<F1, F2, F3, A, B, C>(ra: F1, rb: F2, f: F3) -> BoxRand<C>
@@ -197,33 +188,6 @@ impl RNG {
     )
   }
 
-  pub fn _map<A, B: Clone + 'static, AF, BF>(s: AF, f: BF) -> BoxRand<B>
-    where
-      AF: Fn(RNG) -> (A, RNG) + 'static,
-      BF: Fn(A) -> B + 'static,
-  {
-    Self::flat_map(move |rng| s(rng), move |a| Self::unit(f(a)))
-  }
-
-  /*
-    def _map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
-  flatMap(ra)(a => map(rb)(b => f(a, b)))
-   */
-
-  // pub fn _map2<A: Clone + 'static, B: Clone, C, AF, BF, CF>(ra: AF, rb: BF, f: CF) -> BoxRand<C>
-  // where
-  //     AF: Fn(Simple) -> (A, Simple) + 'static,
-  //     BF: Fn(Simple) -> (B, Simple) + 'static,
-  //     CF: Fn(A, B) -> C + 'static,
-  // {
-  //     Self::flat_map(
-  //         move |rng| ra(rng),
-  //         move |a| {
-  //             let cf = Self::map(|rng| rb(rng), move |b| f(a.clone(), b.clone()));
-  //             cf
-  //         },
-  //     )
-  // }
 }
 
 
@@ -237,17 +201,26 @@ mod state {
   type Rand<A> = State<RNG, A>;
 
   impl<S: Clone + 'static, A: Clone + 'static> State<S, A> {
-    pub fn unit<X: Clone + 'static>(x: X) -> State<S, X> {
+
+    pub fn pure<X: Clone + 'static>(x: X) -> State<S, X> {
       State {
         run: Box::new(move |s| { (x.clone(), s) }),
       }
     }
 
-    pub fn map<B: Clone + 'static, F>(self, f: F) -> State<S, B> where F: Fn(A) -> B + 'static {
-      self.flat_map(move |a| Self::unit(f(a)))
+    pub fn fmap<B: Clone + 'static, F>(self, f: F) -> State<S, B> where F: Fn(A) -> B + 'static {
+      self.bind(move |a| Self::pure(f(a)))
     }
 
-    pub fn flat_map<B, F>(self, f: F) -> State<S, B> where F: Fn(A) -> State<S, B> + 'static {
+    pub fn fmap2<B: Clone + 'static, C: Clone + 'static, F>(self, sb: State<S, B>, f: F) -> State<S, C> where F: Fn(A, B) -> C + 'static {
+      self.bind(move |a| {
+        sb.clone().fmap(move |b| {
+          f(a.clone(), b)
+        })
+      })
+    }
+
+    pub fn bind<B, F>(self, f: F) -> State<S, B> where F: Fn(A) -> State<S, B> + 'static {
       let r1 = self.run;
       State {
         run: Box::new(move |s| {
@@ -262,18 +235,14 @@ mod state {
 
 #[cfg(test)]
 mod tests {
-  use crate::state::{NextInt, RNG};
+  use crate::state::{RNG, NextRandValue};
 
   #[test]
   fn next_int() {
-    let (v1, r1) = RNG::new().next_int();
+    let (v1, r1) = RNG::new().next_i32();
     println!("{:?}", v1);
-    let (v2, r2) = r1.non_negative_int();
+    let (v2, r2) = r1.next_u32();
     println!("{:?}", v2);
   }
 
-  #[test]
-  fn it_works() {
-    assert_eq!(2 + 2, 4);
-  }
 }
