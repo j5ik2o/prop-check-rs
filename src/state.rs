@@ -169,8 +169,7 @@ impl RNG {
   {
     Box::new(move |rng| {
       let (a, r1) = f(rng);
-      let f = g(a);
-      f(r1)
+      (g(a))(r1)
     })
   }
 
