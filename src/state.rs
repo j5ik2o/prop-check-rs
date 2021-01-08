@@ -80,6 +80,29 @@ impl RNG {
     (acc, current_rng)
   }
 
+  pub fn ints_f(count: u32) -> BoxRand<Vec<i32>> {
+    let mut fs: Vec<Box<DynRand<i32>>> = Vec::with_capacity(count as usize);
+    fs.resize_with(count as usize, || Self::int_value());
+    Self::sequence(fs)
+  }
+
+  pub fn unit<A: Clone + 'static>(a: A) -> BoxRand<A> {
+    Box::new(move |rng| (a.clone(), rng))
+  }
+
+  pub fn sequence<A: Clone + 'static, F>(fs: Vec<F>) -> BoxRand<Vec<A>>
+    where
+      F: Fn(RNG) -> (A, RNG) + 'static,
+  {
+    let unit = Self::unit(Vec::<A>::new());
+    let result = fs.into_iter().fold(unit, |acc, e| {
+      Self::map2(acc, e,  |mut a, b| {
+        a.push(b);
+        a
+      })
+    });
+    result
+  }
 
   pub fn int_value() -> BoxRand<i32> {
     Box::new(move |rng: RNG| rng.next_int())
@@ -138,30 +161,6 @@ impl RNG {
     Self::both(Self::double_value(), Self::int_value())
   }
 
-  pub fn unit<A: Clone + 'static>(a: A) -> BoxRand<A> {
-    Box::new(move |rng| (a.clone(), rng))
-  }
-
-  pub fn sequence<A: Clone + 'static, F>(fs: Vec<F>) -> BoxRand<Vec<A>>
-    where
-      F: Fn(RNG) -> (A, RNG) + 'static,
-  {
-    let unit = Self::unit(Vec::<A>::new());
-    let result = fs.into_iter().rev().fold(unit, |acc, e| {
-      Self::map2(acc, e, |mut a: Vec<A>, b: A| {
-        a.push(b);
-        a
-      })
-    });
-    result
-  }
-
-  pub fn ints_f(count: u32) -> BoxRand<Vec<i32>> {
-    let mut v: Vec<Box<DynRand<i32>>> = Vec::with_capacity(count as usize);
-    v.resize_with(count as usize, || Self::int_value());
-    Self::sequence(v)
-  }
-
   pub fn flat_map<A, B, F, GF, BF>(f: F, g: GF) -> BoxRand<B>
     where
       F: Fn(RNG) -> (A, RNG) + 'static,
@@ -169,7 +168,7 @@ impl RNG {
       GF: Fn(A) -> BF + 'static,
   {
     Box::new(move |rng| {
-      let (a, r1): (A, RNG) = f(rng);
+      let (a, r1) = f(rng);
       let f = g(a);
       f(r1)
     })
