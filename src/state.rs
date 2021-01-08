@@ -188,40 +188,6 @@ impl RNG {
     )
   }
 }
-mod hoge {
-  #![feature(unboxed_closures)]
-
-  struct State<'a, S, A> {
-    // `Fn(S) -> (A, S)` is a trait for environment-immutable closures.
-    // others include `FnMut` (environment-mutable) and `FnOnce` (can only be called once);
-    // this is very similar (and in fact, equivalent) to `&self`, `&mut self` and `self` methods respectively.
-    // `Box<...>` is required for making it a concrete (sized) type, allowing it to be stored to the struct.
-    // `+ 'a` is required since the trait can contain references (similar to `|...|: 'a -> ...` in the boxed closure).
-    runState: Box<dyn Fn(S) -> (A, S) + 'a>
-  }
-
-  impl<'a, S, A> State<'a, S, A> {
-    // unlike old closures, new closures are generic, so you need a trait bound.
-    fn and_then<'b, B, F>(&'b self, f: F) -> State<'b, S, B>
-      where F: Fn(A) -> State<'b, S, B> + 'b
-    {
-      State {
-        // `box` is for making `Box<...>`.
-        // `move |...| { ... }` means that the closure moves its environments into itself,
-        // this is required since we lose `f` after the return.
-        // the borrowing counterpart is called `ref |...| { ... }`, and a bare `|...| { ... }` will be inferred to one of both.
-        runState: box move |firstState| {
-          // currently there is a caveat for calling new closures in a box:
-          // you cannot directly use the call syntax. you need to explicitly write the method name out.
-          // also note the "weird" tuple construction, this makes one-element tuple.
-          let (result, nextState) = (self.runState)((firstState));
-
-          (f(result).runState)((nextState))
-        }
-      }
-    }
-  }
-}
 
 mod state {
   use std::rc::Rc;
@@ -235,7 +201,7 @@ mod state {
   impl<'a, S, A> State<'a, S, A> {
     pub fn pure<'b, X: Clone + 'b>(x: X) -> State<'b, S, X> {
       State {
-        run: box move |s| { (x.clone(), s) },
+        run: box move |s| (x.clone(), s),
       }
     }
 
