@@ -17,8 +17,8 @@ pub struct RNG {
   seed: i64,
 }
 
-type DynRand<A> = dyn Fn(RNG) -> (A, RNG);
-type BoxRand<A> = Box<DynRand<A>>;
+type DynRand<'a, A> = dyn Fn(RNG) -> (A, RNG) + 'a;
+type BoxRand<'a, A> = Box<DynRand<'a, A>>;
 
 impl NextRandValue for RNG {
   fn next_i32(&self) -> (i32, Self) {
@@ -89,19 +89,19 @@ impl RNG {
     (acc, current_rng)
   }
 
-  pub fn ints_f(count: u32) -> BoxRand<Vec<i32>> {
+  pub fn ints_f<'a>(count: u32) -> BoxRand<'a, Vec<i32>> {
     let mut fs: Vec<Box<DynRand<i32>>> = Vec::with_capacity(count as usize);
     fs.resize_with(count as usize, || Self::int_value());
     Self::sequence(fs)
   }
 
-  pub fn unit<A: Clone + 'static>(a: A) -> BoxRand<A> {
+  pub fn unit<'a, A: Clone + 'a>(a: A) -> BoxRand<'a, A> {
     Box::new(move |rng| (a.clone(), rng))
   }
 
-  pub fn sequence<A: Clone + 'static, F>(fs: Vec<F>) -> BoxRand<Vec<A>>
+  pub fn sequence<'a, A: Clone + 'a, F>(fs: Vec<F>) -> BoxRand<'a, Vec<A>>
     where
-      F: Fn(RNG) -> (A, RNG) + 'static,
+      F: Fn(RNG) -> (A, RNG) + 'a,
   {
     let unit = Self::unit(Vec::<A>::new());
     let result = fs.into_iter().fold(unit, |acc, e| {
@@ -113,18 +113,18 @@ impl RNG {
     result
   }
 
-  pub fn int_value() -> BoxRand<i32> {
-    Box::new(move |rng | rng.next_i32())
+  pub fn int_value<'a>() -> BoxRand<'a, i32> {
+    Box::new(move |rng| rng.next_i32())
   }
 
-  pub fn double_value() -> BoxRand<f32> {
+  pub fn double_value<'a>() -> BoxRand<'a, f32> {
     Box::new(move |rng| rng.next_f32())
   }
 
-  pub fn map<A, B, F1, F2>(s: F1, f: F2) -> BoxRand<B>
+  pub fn map<'a, A, B, F1, F2>(s: F1, f: F2) -> BoxRand<'a, B>
     where
-      F1: Fn(RNG) -> (A, RNG) + 'static,
-      F2: Fn(A) -> B + 'static,
+      F1: Fn(RNG) -> (A, RNG) + 'a,
+      F2: Fn(A) -> B + 'a,
   {
     Box::new(move |rng| {
       let (a, rng2) = s(rng);
@@ -132,11 +132,11 @@ impl RNG {
     })
   }
 
-  pub fn map2<F1, F2, F3, A, B, C>(ra: F1, rb: F2, f: F3) -> BoxRand<C>
+  pub fn map2<'a, F1, F2, F3, A, B, C>(ra: F1, rb: F2, f: F3) -> BoxRand<'a, C>
     where
-      F1: Fn(RNG) -> (A, RNG) + 'static,
-      F2: Fn(RNG) -> (B, RNG) + 'static,
-      F3: Fn(A, B) -> C + 'static,
+      F1: Fn(RNG) -> (A, RNG) + 'a,
+      F2: Fn(RNG) -> (B, RNG) + 'a,
+      F3: Fn(A, B) -> C + 'a,
   {
     Box::new(move |rng| {
       let (a, r1) = ra(rng);
@@ -145,27 +145,27 @@ impl RNG {
     })
   }
 
-  pub fn both<F1, F2, A, B>(ra: F1, rb: F2) -> BoxRand<(A, B)>
+  pub fn both<'a, F1, F2, A, B>(ra: F1, rb: F2) -> BoxRand<'a, (A, B)>
     where
-      F1: Fn(RNG) -> (A, RNG) + 'static,
-      F2: Fn(RNG) -> (B, RNG) + 'static,
+      F1: Fn(RNG) -> (A, RNG) + 'a,
+      F2: Fn(RNG) -> (B, RNG) + 'a,
   {
     Self::map2(ra, rb, |a, b| (a, b))
   }
 
-  pub fn rand_int_double() -> BoxRand<(i32, f32)> {
+  pub fn rand_int_double<'a>() -> BoxRand<'a, (i32, f32)> {
     Self::both(Self::int_value(), Self::double_value())
   }
 
-  pub fn rand_double_int() -> BoxRand<(f32, i32)> {
+  pub fn rand_double_int<'a>() -> BoxRand<'a, (f32, i32)> {
     Self::both(Self::double_value(), Self::int_value())
   }
 
-  pub fn flat_map<A, B, F, GF, BF>(f: F, g: GF) -> BoxRand<B>
+  pub fn flat_map<'a, A, B, F, GF, BF>(f: F, g: GF) -> BoxRand<'a, B>
     where
-      F: Fn(RNG) -> (A, RNG) + 'static,
+      F: Fn(RNG) -> (A, RNG) + 'a,
       BF: Fn(RNG) -> (B, RNG),
-      GF: Fn(A) -> BF + 'static,
+      GF: Fn(A) -> BF + 'a,
   {
     Box::new(move |rng| {
       let (a, r1) = f(rng);
@@ -174,7 +174,7 @@ impl RNG {
     })
   }
 
-  pub fn non_negative_less_than(n: u32) -> BoxRand<u32> {
+  pub fn non_negative_less_than<'a>(n: u32) -> BoxRand<'a, u32> {
     Self::flat_map(
       |rng| rng.next_u32(),
       move |i| {
@@ -187,47 +187,68 @@ impl RNG {
       },
     )
   }
-
 }
+mod hoge {
+  #![feature(unboxed_closures)]
 
-
-mod state {
-  use crate::state::RNG;
-
-  struct State<S, A> {
-    run: Box<dyn Fn(S) -> (A, S)>,
+  struct State<'a, S, A> {
+    // `Fn(S) -> (A, S)` is a trait for environment-immutable closures.
+    // others include `FnMut` (environment-mutable) and `FnOnce` (can only be called once);
+    // this is very similar (and in fact, equivalent) to `&self`, `&mut self` and `self` methods respectively.
+    // `Box<...>` is required for making it a concrete (sized) type, allowing it to be stored to the struct.
+    // `+ 'a` is required since the trait can contain references (similar to `|...|: 'a -> ...` in the boxed closure).
+    runState: Box<dyn Fn(S) -> (A, S) + 'a>
   }
 
-  type Rand<A> = State<RNG, A>;
-
-  impl<S: Clone + 'static, A: Clone + 'static> State<S, A> {
-
-    pub fn pure<X: Clone + 'static>(x: X) -> State<S, X> {
+  impl<'a, S, A> State<'a, S, A> {
+    // unlike old closures, new closures are generic, so you need a trait bound.
+    fn and_then<'b, B, F>(&'b self, f: F) -> State<'b, S, B>
+      where F: Fn(A) -> State<'b, S, B> + 'b
+    {
       State {
-        run: Box::new(move |s| { (x.clone(), s) }),
+        // `box` is for making `Box<...>`.
+        // `move |...| { ... }` means that the closure moves its environments into itself,
+        // this is required since we lose `f` after the return.
+        // the borrowing counterpart is called `ref |...| { ... }`, and a bare `|...| { ... }` will be inferred to one of both.
+        runState: box move |firstState| {
+          // currently there is a caveat for calling new closures in a box:
+          // you cannot directly use the call syntax. you need to explicitly write the method name out.
+          // also note the "weird" tuple construction, this makes one-element tuple.
+          let (result, nextState) = (self.runState)((firstState));
+
+          (f(result).runState)((nextState))
+        }
+      }
+    }
+  }
+}
+
+mod state {
+  use std::rc::Rc;
+
+  use crate::state::RNG;
+
+  struct State<'a, S, A> {
+    run: Box<dyn Fn(S) -> (A, S) + 'a>,
+  }
+
+  impl<'a, S: Clone, A: Clone> State<'a, S, A> {
+    pub fn pure<'x, X: Clone + 'x>(x: X) -> State<'x, S, X> {
+      State {
+        run: box move |s| { (x.clone(), s) },
       }
     }
 
-    pub fn fmap<B: Clone + 'static, F>(self, f: F) -> State<S, B> where F: Fn(A) -> B + 'static {
+    pub fn fmap<'b, B: Clone + 'b, F>(&'b self, f: F) -> State<'b, S, B> where F: Fn(A) -> B + 'b {
       self.bind(move |a| Self::pure(f(a)))
     }
 
-    pub fn fmap2<B: Clone + 'static, C: Clone + 'static, F>(self, sb: State<S, B>, f: F) -> State<S, C> where F: Fn(A, B) -> C + 'static {
-      self.bind(move |a| {
-        sb.clone().fmap(move |b| {
-          f(a.clone(), b)
-        })
-      })
-    }
-
-    pub fn bind<B, F>(self, f: F) -> State<S, B> where F: Fn(A) -> State<S, B> + 'static {
-      let r1 = self.run;
+    pub fn bind<'b, B, F>(&'b self, f: F) -> State<'b, S, B> where F: Fn(A) -> State<'b, S, B> + 'b {
       State {
-        run: Box::new(move |s| {
-          let (b, s1) = r1(s);
-          let r2 = f(b).run;
-          r2(s1)
-        }),
+        run: box move |s| {
+          let (b, s1) = (self.run)(s);
+          (f(b).run)(s1)
+        },
       }
     }
   }
@@ -235,14 +256,13 @@ mod state {
 
 #[cfg(test)]
 mod tests {
-  use crate::state::{RNG, NextRandValue};
+  use crate::state::{NextRandValue, RNG};
 
   #[test]
   fn next_int() {
     let (v1, r1) = RNG::new().next_i32();
     println!("{:?}", v1);
-    let (v2, r2) = r1.next_u32();
+    let (v2, _) = r1.next_u32();
     println!("{:?}", v2);
   }
-
 }

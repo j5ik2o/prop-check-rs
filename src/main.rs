@@ -1,3 +1,5 @@
+#![feature(box_syntax)]
+
 use crate::state::RNG;
 
 mod state;
