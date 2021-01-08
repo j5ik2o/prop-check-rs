@@ -74,7 +74,7 @@ impl RNG {
     while index > 0 {
       let (x, new_rng) = current_rng.next_int();
       acc.push(x);
-      index = index -1;
+      index -= 1;
       current_rng = new_rng;
     }
     (acc, current_rng)
