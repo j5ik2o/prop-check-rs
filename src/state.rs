@@ -1,17 +1,18 @@
-pub trait RNG {
+pub trait NextInt {
   fn next_int(&self) -> (i32, Self);
 }
 
-struct Simple {
+#[derive(Clone, Debug)]
+pub struct RNG {
   seed: i64,
 }
 
-type DynRand<A> = dyn Fn(Simple) -> (A, Simple);
+type DynRand<A> = dyn Fn(RNG) -> (A, RNG);
 type BoxRand<A> = Box<DynRand<A>>;
 
-impl Simple {
+impl RNG {
   pub fn new() -> Self {
-    Simple { seed: i64::MAX }
+    RNG { seed: i64::MAX }
   }
 
   pub fn non_negative_int(&self) -> (i32, Self) {
@@ -42,12 +43,12 @@ impl Simple {
     ((d1, d2, d3), r3)
   }
 
-  pub fn ints(self, count: i32) -> (Vec<i32>, Self) {
+  pub fn ints1(self, count: i32) -> (Vec<i32>, Self) {
     if count == 0 {
       (vec![], self)
     } else {
       let (x, r1) = self.next_int();
-      let (mut xs, r2) = r1.ints(count - 1);
+      let (mut xs, r2) = r1.ints1(count - 1);
       let mut xl = vec![x];
       xl.append(&mut xs);
       (xl, r2)
@@ -55,7 +56,7 @@ impl Simple {
   }
 
   pub fn ints2(self, count: i32) -> (Vec<i32>, Self) {
-    fn go(count: i32, r: Simple, mut xs: Vec<i32>) -> (Vec<i32>, Simple) {
+    fn go(count: i32, r: RNG, mut xs: Vec<i32>) -> (Vec<i32>, RNG) {
       if count == 0 {
         (xs, r)
       } else {
@@ -68,13 +69,27 @@ impl Simple {
     go(count, self, vec![])
   }
 
+  pub fn ints3(self, count: i32) -> (Vec<i32>, Self) {
+    let mut index = count;
+    let mut result = vec![];
+    let mut current_rng = self;
+    while index > 0 {
+      let (x, new_rng) = current_rng.next_int();
+      result.push(x);
+      index = index -1;
+      current_rng = new_rng;
+    }
+    (result, current_rng)
+  }
+
+
   pub fn int_value() -> BoxRand<i32> {
-    Box::new(move |rng: Simple| rng.next_int())
+    Box::new(move |rng: RNG| rng.next_int())
   }
 
   pub fn map<A, B, F1, F2>(s: F1, f: F2) -> BoxRand<B>
     where
-      F1: Fn(Simple) -> (A, Simple) + 'static,
+      F1: Fn(RNG) -> (A, RNG) + 'static,
       F2: Fn(A) -> B + 'static,
   {
     Box::new(move |rng| {
@@ -98,8 +113,8 @@ impl Simple {
 
   pub fn map2<F1, F2, F3, A, B, C>(ra: F1, rb: F2, f: F3) -> BoxRand<C>
     where
-      F1: Fn(Simple) -> (A, Simple) + 'static,
-      F2: Fn(Simple) -> (B, Simple) + 'static,
+      F1: Fn(RNG) -> (A, RNG) + 'static,
+      F2: Fn(RNG) -> (B, RNG) + 'static,
       F3: Fn(A, B) -> C + 'static,
   {
     Box::new(move |rng| {
@@ -111,8 +126,8 @@ impl Simple {
 
   pub fn both<F1, F2, A, B>(ra: F1, rb: F2) -> BoxRand<(A, B)>
     where
-      F1: Fn(Simple) -> (A, Simple) + 'static,
-      F2: Fn(Simple) -> (B, Simple) + 'static,
+      F1: Fn(RNG) -> (A, RNG) + 'static,
+      F2: Fn(RNG) -> (B, RNG) + 'static,
   {
     Self::map2(ra, rb, |a, b| (a, b))
   }
@@ -131,7 +146,7 @@ impl Simple {
 
   pub fn sequence<A: Clone + 'static, F>(fs: Vec<F>) -> BoxRand<Vec<A>>
     where
-      F: Fn(Simple) -> (A, Simple) + 'static,
+      F: Fn(RNG) -> (A, RNG) + 'static,
   {
     let unit = Self::unit(Vec::<A>::new());
     let result = fs.into_iter().rev().fold(unit, |acc, e| {
@@ -151,12 +166,12 @@ impl Simple {
 
   pub fn flat_map<A, B, F, GF, BF>(f: F, g: GF) -> BoxRand<B>
     where
-      F: Fn(Simple) -> (A, Simple) + 'static,
-      BF: Fn(Simple) -> (B, Simple),
+      F: Fn(RNG) -> (A, RNG) + 'static,
+      BF: Fn(RNG) -> (B, RNG),
       GF: Fn(A) -> BF + 'static,
   {
     Box::new(move |rng| {
-      let (a, r1): (A, Simple) = f(rng);
+      let (a, r1): (A, RNG) = f(rng);
       let f = g(a);
       f(r1)
     })
@@ -178,7 +193,7 @@ impl Simple {
 
   pub fn _map<A, B: Clone + 'static, AF, BF>(s: AF, f: BF) -> BoxRand<B>
     where
-      AF: Fn(Simple) -> (A, Simple) + 'static,
+      AF: Fn(RNG) -> (A, RNG) + 'static,
       BF: Fn(A) -> B + 'static,
   {
     Self::flat_map(move |rng| s(rng), move |a| Self::unit(f(a)))
@@ -205,25 +220,23 @@ impl Simple {
   // }
 }
 
-impl RNG for Simple {
+impl NextInt for RNG {
   fn next_int(&self) -> (i32, Self) {
     let new_seed = self.seed.wrapping_mul(0x5DEECE66D) & 0xFFFFFFFFFFFF;
-    let next_rng = Simple { seed: new_seed };
+    let next_rng = RNG { seed: new_seed };
     let n = (new_seed >> 16) as i32;
     (n, next_rng)
   }
 }
 
 mod state {
-  use std::marker::PhantomData;
-
-  use crate::state::{RNG, Simple};
+  use crate::state::{NextInt, RNG};
 
   struct State<S, A> {
     run: Box<dyn Fn(S) -> (A, S)>,
   }
 
-  type Rand<A> = State<Simple, A>;
+  type Rand<A> = State<RNG, A>;
 
   impl<S: Clone + 'static, A: Clone + 'static> State<S, A> {
     pub fn unit<X: Clone + 'static>(x: X) -> State<S, X> {
@@ -251,11 +264,11 @@ mod state {
 
 #[cfg(test)]
 mod tests {
-  use crate::state::{RNG, Simple};
+  use crate::state::{NextInt, RNG};
 
   #[test]
   fn next_int() {
-    let (v1, r1) = Simple::new().next_int();
+    let (v1, r1) = RNG::new().next_int();
     println!("{:?}", v1);
     let (v2, r2) = r1.non_negative_int();
     println!("{:?}", v2);
