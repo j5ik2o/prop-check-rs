@@ -2,15 +2,15 @@ pub trait NextRandValue {
   fn next_i32(&self) -> (i32, Self);
 
   fn next_u32(&self) -> (u32, Self)
-    where
-      Self: Sized, {
+  where
+    Self: Sized, {
     let (i, r) = self.next_i32();
     (if i < 0 { -(i + 1) as u32 } else { i as u32 }, r)
   }
 
   fn next_f32(&self) -> (f32, Self)
-    where
-      Self: Sized, {
+  where
+    Self: Sized, {
     let (i, r) = self.next_i32();
     (i as f32 / (std::i32::MAX as f32 + 1.0f32), r)
   }
@@ -104,8 +104,8 @@ impl RNG {
   }
 
   pub fn sequence<'a, A: Clone + 'a, F>(fs: Vec<F>) -> BoxRand<'a, Vec<A>>
-    where
-      F: Fn(RNG) -> (A, RNG) + 'a, {
+  where
+    F: Fn(RNG) -> (A, RNG) + 'a, {
     let unit = Self::unit(Vec::<A>::new());
     let result = fs.into_iter().fold(unit, |acc, e| {
       Self::map2(acc, e, |mut a, b| {
@@ -125,9 +125,9 @@ impl RNG {
   }
 
   pub fn map<'a, A, B, F1, F2>(s: F1, f: F2) -> BoxRand<'a, B>
-    where
-      F1: Fn(RNG) -> (A, RNG) + 'a,
-      F2: Fn(A) -> B + 'a, {
+  where
+    F1: Fn(RNG) -> (A, RNG) + 'a,
+    F2: Fn(A) -> B + 'a, {
     Box::new(move |rng| {
       let (a, rng2) = s(rng);
       (f(a), rng2)
@@ -135,10 +135,10 @@ impl RNG {
   }
 
   pub fn map2<'a, F1, F2, F3, A, B, C>(ra: F1, rb: F2, f: F3) -> BoxRand<'a, C>
-    where
-      F1: Fn(RNG) -> (A, RNG) + 'a,
-      F2: Fn(RNG) -> (B, RNG) + 'a,
-      F3: Fn(A, B) -> C + 'a, {
+  where
+    F1: Fn(RNG) -> (A, RNG) + 'a,
+    F2: Fn(RNG) -> (B, RNG) + 'a,
+    F3: Fn(A, B) -> C + 'a, {
     Box::new(move |rng| {
       let (a, r1) = ra(rng);
       let (b, r2) = rb(r1);
@@ -147,9 +147,9 @@ impl RNG {
   }
 
   pub fn both<'a, F1, F2, A, B>(ra: F1, rb: F2) -> BoxRand<'a, (A, B)>
-    where
-      F1: Fn(RNG) -> (A, RNG) + 'a,
-      F2: Fn(RNG) -> (B, RNG) + 'a, {
+  where
+    F1: Fn(RNG) -> (A, RNG) + 'a,
+    F2: Fn(RNG) -> (B, RNG) + 'a, {
     Self::map2(ra, rb, |a, b| (a, b))
   }
 
@@ -162,10 +162,10 @@ impl RNG {
   }
 
   pub fn flat_map<'a, A, B, F, GF, BF>(f: F, g: GF) -> BoxRand<'a, B>
-    where
-      F: Fn(RNG) -> (A, RNG) + 'a,
-      BF: Fn(RNG) -> (B, RNG),
-      GF: Fn(A) -> BF + 'a, {
+  where
+    F: Fn(RNG) -> (A, RNG) + 'a,
+    BF: Fn(RNG) -> (B, RNG),
+    GF: Fn(A) -> BF + 'a, {
     Box::new(move |rng| {
       let (a, r1) = f(rng);
       (g(a))(r1)
@@ -193,53 +193,62 @@ pub mod state {
   }
 
   impl<'a, S, A> State<'a, S, A> {
-    pub fn new<'b, T: Clone + 'b, B: Clone + 'b>(run_f: Box<dyn Fn(T) -> (B, T) + 'b>) -> State<'b, T, B>  {
-      State {
-        run_f
-      }
+    pub fn new<'b, T, B>(run_f: Box<dyn Fn(T) -> (B, T) + 'b>) -> State<'b, T, B>
+    where
+      T: Clone + 'b,
+      B: Clone + 'b, {
+      State { run_f }
     }
 
     pub fn run(&self, s: S) -> (A, S) {
       (self.run_f)(s)
     }
 
-    pub fn pure<'b, T: Clone + 'b, B: Clone + 'b>(x: B) -> State<'b, T, B> {
-      Self::new(
-        box move |s| (x.clone(), s)
-      )
+    pub fn pure<'b, T, B>(x: B) -> State<'b, T, B>
+    where
+      T: Clone + 'b,
+      B: Clone + 'b, {
+      Self::new(box move |s| (x.clone(), s))
     }
 
-    pub fn fmap<'b, B: Clone + 'b, F>(&'a self, f: F) -> State<'b, S, B>
-      where
-        F: Fn(A) -> B + 'b, S: Clone, 'a: 'b {
+    pub fn fmap<'b, B, F>(&'a self, f: F) -> State<'b, S, B>
+    where
+      F: Fn(A) -> B + 'b,
+      S: Clone,
+      B: Clone + 'b,
+      'a: 'b, {
       self.bind(move |a| Self::pure(f(a)))
     }
 
-    pub fn bind<'b, B: Clone + 'b, F>(&'a self, f: F) -> State<'b, S, B>
-      where
-        F: Fn(A) -> State<'b, S, B> + 'b, S: Clone, 'a: 'b {
-      Self::new(
-        box move |s| {
-          let (a, s1) = self.run(s);
-          f(a).run(s1)
-        },
-      )
+    pub fn bind<'b, B, F>(&'a self, f: F) -> State<'b, S, B>
+    where
+      F: Fn(A) -> State<'b, S, B> + 'b,
+      S: Clone,
+      B: Clone + 'b,
+      'a: 'b, {
+      Self::new(box move |s| {
+        let (a, s1) = self.run(s);
+        f(a).run(s1)
+      })
     }
 
-    pub fn modify<'b, T: Clone + 'b, F>(f: F) -> State<'b, T, ()> where F: Fn(T) -> T + 'b {
+    pub fn modify<'b, T, F>(f: F) -> State<'b, T, ()>
+    where
+      F: Fn(T) -> T + 'b,
+      T: Clone + 'b, {
       Self::get().bind(move |s| Self::set(f(s)))
     }
 
-    pub fn get<'b, T: Clone + 'b>() -> State<'b, T, T> {
-      Self::new(
-        box move |s| (s.clone(), s)
-      )
+    pub fn get<'b, T>() -> State<'b, T, T>
+    where
+      T: Clone + 'b, {
+      Self::new(box move |s| (s.clone(), s))
     }
 
-    pub fn set<'b, T: Clone + 'b>(s: T) -> State<'b, T, ()> {
-      Self::new(
-        box move |_| ((), s.clone())
-      )
+    pub fn set<'b, T>(s: T) -> State<'b, T, ()>
+    where
+      T: Clone + 'b, {
+      Self::new(box move |_| ((), s.clone()))
     }
 
     // pub fn sequence<'b>(sas: &'b Vec<State<'b, S, A>>) -> State<'b, S, Vec<A>> {
