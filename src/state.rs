@@ -188,11 +188,6 @@ impl RNG {
 }
 
 pub mod state {
-  use std::marker::PhantomData;
-  use std::rc::Rc;
-
-  use crate::state::RNG;
-
   pub struct State<'a, S, A> {
     run_f: Box<dyn Fn(S) -> (A, S) + 'a>,
   }
