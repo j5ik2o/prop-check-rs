@@ -5,6 +5,7 @@ use crate::rng::RNG;
 mod prop;
 mod rng;
 mod state;
+// mod machine;
 
 const COUNT: u32 = 100000000;
 
