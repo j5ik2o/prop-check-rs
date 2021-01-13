@@ -3,6 +3,8 @@
 
 use crate::rng::RNG;
 
+mod gen;
+mod laziness;
 mod machine;
 mod prop;
 mod rng;

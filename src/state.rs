@@ -20,10 +20,6 @@ impl<'a, S, A> State<'a, S, A> {
     }
   }
 
-  // pub fn new<'b, T, B>(run_f: Rc<Box<dyn FnOnce(T) -> (B, T) + 'b>>) -> State<'b, T, B> {
-  //   State { run_f }
-  // }
-
   pub fn run(self, s: S) -> (A, S) {
     let f = Rc::try_unwrap(self.run_f).unwrap_or_else(|err| panic!());
     f(s)
