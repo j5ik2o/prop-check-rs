@@ -192,11 +192,18 @@ pub mod state {
     run_f: Box<dyn Fn(S) -> (A, S) + 'a>,
   }
 
+  impl<'a, S, A> Default for State<'a, S, A>
+  where
+    S: Default,
+    A: Default,
+  {
+    fn default() -> Self {
+      Self::new(Box::new(|_| (A::default(), S::default())))
+    }
+  }
+
   impl<'a, S, A> State<'a, S, A> {
-    pub fn new<'b, T, B>(run_f: Box<dyn Fn(T) -> (B, T) + 'b>) -> State<'b, T, B>
-    where
-      T: Clone + 'b,
-      B: Clone + 'b, {
+    pub fn new<'b, T, B>(run_f: Box<dyn Fn(T) -> (B, T) + 'b>) -> State<'b, T, B> {
       State { run_f }
     }
 
@@ -204,129 +211,170 @@ pub mod state {
       (self.run_f)(s)
     }
 
-    pub fn pure<'b, T, B>(x: B) -> State<'b, T, B>
+    pub fn pure<'b, T, B>(b: B) -> State<'b, T, B>
     where
-      T: Clone + 'b,
       B: Clone + 'b, {
-      Self::new(box move |s| (x.clone(), s))
+      Self::new(Box::new(move |s| (b.clone(), s)))
     }
 
-    pub fn fmap<'b, B, F>(&'a self, f: F) -> State<'b, S, B>
+    pub fn fmap<'b, B, F>(self, f: F) -> State<'b, S, B>
     where
       F: Fn(A) -> B + 'b,
-      S: Clone,
       B: Clone + 'b,
+      A: 'a,
+      S: 'a,
       'a: 'b, {
       self.bind(move |a| Self::pure(f(a)))
     }
 
-    pub fn bind<'b, B, F>(&'a self, f: F) -> State<'b, S, B>
+    pub fn bind<'b, B, F>(self, f: F) -> State<'b, S, B>
     where
       F: Fn(A) -> State<'b, S, B> + 'b,
-      S: Clone,
       B: Clone + 'b,
+      A: 'a,
+      S: 'a,
       'a: 'b, {
-      Self::new(box move |s| {
+      Self::new(Box::new(move |s| {
         let (a, s1) = self.run(s);
         f(a).run(s1)
-      })
+      }))
     }
 
     pub fn modify<'b, T, F>(f: F) -> State<'b, T, ()>
     where
       F: Fn(T) -> T + 'b,
       T: Clone + 'b, {
-      Self::get().bind(move |s| Self::set(f(s)))
+      let s = Self::get();
+      s.bind(move |t: T| Self::set(f(t)))
     }
 
     pub fn get<'b, T>() -> State<'b, T, T>
     where
       T: Clone + 'b, {
-      Self::new(box move |s| (s.clone(), s))
+      Self::new(Box::new(move |t| (t.clone(), t)))
     }
 
-    pub fn set<'b, T>(s: T) -> State<'b, T, ()>
+    pub fn set<'b, T>(t: T) -> State<'b, T, ()>
     where
       T: Clone + 'b, {
-      Self::new(box move |_| ((), s.clone()))
+      Self::new(Box::new(move |_| ((), t.clone())))
     }
 
-    // pub fn sequence<'b>(sas: &'b Vec<State<'b, S, A>>) -> State<'b, S, Vec<A>> {
-    //   State::new(
-    //     box move |s| {
-    //       let mut s_ = s;
-    //       let mut actions = sas;
-    //       let mut acc: Vec<A> = vec![];
-    //       for x in actions.into_iter() {
-    //         let (a, s2) = x.run(s_);
-    //         s_ = s2;
-    //         acc.push(a);
-    //       }
-    //       (acc, s_)
-    //     }
-    //   )
-    // }
+    pub fn sequence(sas: &mut Vec<State<'a, S, A>>) -> State<'a, S, Vec<A>>
+    where
+      A: Default + 'a,
+      S: Default + 'a, {
+      let new_vec = std::iter::repeat_with(Default::default)
+        .take(sas.len())
+        .collect::<Vec<_>>();
+      let old_vec = std::mem::replace(sas, new_vec);
+      Self::new(Box::new(move |s| {
+        let mut s_ = s;
+        let mut acc: Vec<A> = vec![];
+        for x in (&old_vec).into_iter() {
+          let (a, s2) = x.run(s_);
+          s_ = s2;
+          acc.push(a);
+        }
+        (acc, s_)
+      }))
+    }
   }
 }
 
-// #[cfg(test)]
-// mod tests {
-//   use crate::state::{NextRandValue, RNG};
-//   use crate::state::state::*;
-//
-//   #[derive(Clone, Copy)]
-//   enum Input {
-//     Coin,
-//     Turn,
-//   }
-//
-//   #[derive(Clone, Copy)]
-//   struct Machine { locked: bool, candies: i32, coins: i32 }
-//
-//   impl Machine {
-//     fn simulate_machine<'a>(inputs: Vec<Input>) -> State<'a, Machine, (i32, i32)> {
-//       let xs = inputs.into_iter().map(move |i| {
-//         let uf: Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>> = Self::update();
-//         let r: Box<dyn Fn(Machine) -> Machine> = uf(i);
-//         State::<Machine, ()>::modify(move |m: Machine| r(m))
-//       }).collect::<Vec<_>>();
-//
-//       let result = State::sequence(&xs);
-//       result.bind(|_| {
-//         State::<Machine, Machine>::get().fmap(|s: Machine| (s.coins, s.candies))
-//       })
-//     }
-//
-//     fn update() -> Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>> {
-//       box move |i: Input| {
-//         box move |s: Machine| {
-//           match (i, s) {
-//             (_, Machine { candies: 0, .. }) => s.clone(),
-//             // (Coin, Machine { locked: false, .. }) => s.clone(),
-//             // (Turn, Machine { locked: true, .. }) => s.clone(),
-//             (Coin, Machine { locked: true, candies: candy, coins: coin }) =>
-//               Machine { locked: false, candies: candy, coins: coin + 1 },
-//             (Turn, Machine { locked: false, candies: candy, coins: coin }) =>
-//               Machine { locked: true, candies: candy - 1, coins: coin },
-//           }
-//         }
-//       }
-//     }
-//   }
-//
-//
-//   #[test]
-//   fn next_int() {
-//     let (v1, r1) = RNG::new().next_i32();
-//     println!("{:?}", v1);
-//     let (v2, _) = r1.next_u32();
-//     println!("{:?}", v2);
-//   }
-//
-//   #[test]
-//   fn state() {
-//     let s = State::<i32, i32>::pure(10);
-//     let r = s.run(10);
-//     println!("{:?}", r);
-//   }
-// }
+#[cfg(test)]
+mod tests {
+  use crate::state::state::*;
+  use crate::state::{NextRandValue, RNG};
+
+  #[derive(Debug, Clone, Copy)]
+  enum Input {
+    Coin,
+    Turn,
+  }
+
+  #[derive(Debug, Clone, Copy, Default)]
+  struct Machine {
+    locked: bool,
+    candies: i32,
+    coins: i32,
+  }
+
+  impl Machine {
+    fn simulate_machine<'a>(inputs: Vec<Input>) -> State<'a, Machine, (i32, i32)> {
+      let mut xs = inputs
+        .into_iter()
+        .map(move |i| {
+          let uf: Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>> = Self::update();
+          let r: Box<dyn Fn(Machine) -> Machine> = uf(i);
+          State::<Machine, ()>::modify(move |m: Machine| r(m))
+        })
+        .collect::<Vec<_>>();
+
+      let result = State::sequence(&mut xs);
+      result.bind(|_| State::<Machine, Machine>::get().fmap(|s: Machine| (s.coins, s.candies)))
+    }
+
+    fn update() -> Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>> {
+      box move |i: Input| {
+        box move |s: Machine| {
+          match (i, s) {
+            (_, Machine { candies: 0, .. }) => s.clone(),
+            // (Coin, Machine { locked: false, .. }) => s.clone(),
+            // (Turn, Machine { locked: true, .. }) => s.clone(),
+            (
+              Coin,
+              Machine {
+                locked: true,
+                candies: candy,
+                coins: coin,
+              },
+            ) => Machine {
+              locked: false,
+              candies: candy,
+              coins: coin + 1,
+            },
+            (
+              Turn,
+              Machine {
+                locked: false,
+                candies: candy,
+                coins: coin,
+              },
+            ) => Machine {
+              locked: true,
+              candies: candy - 1,
+              coins: coin,
+            },
+          }
+        }
+      }
+    }
+  }
+
+  #[test]
+  fn next_int() {
+    let (v1, r1) = RNG::new().next_i32();
+    println!("{:?}", v1);
+    let (v2, _) = r1.next_u32();
+    println!("{:?}", v2);
+  }
+
+  #[test]
+  fn state() {
+    let s = State::<i32, i32>::pure(10);
+    let r = s.run(10);
+    println!("{:?}", r);
+  }
+
+  #[test]
+  fn candy() {
+    let state = Machine::simulate_machine(vec![Input::Coin, Input::Turn]);
+    let result = state.run(Machine {
+      locked: true,
+      candies: 1,
+      coins: 1,
+    });
+    println!("{:?}", result);
+  }
+}
