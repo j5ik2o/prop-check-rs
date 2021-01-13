@@ -1,11 +1,9 @@
-#![feature(box_syntax)]
-
 use crate::rng::RNG;
 
 mod prop;
 mod rng;
 mod state;
-// mod machine;
+mod machine;
 
 const COUNT: u32 = 100000000;
 

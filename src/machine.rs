@@ -29,8 +29,8 @@ impl Machine {
   }
 
   fn update() -> Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>> {
-    box move |i: Input| {
-      box move |s: Machine| {
+    Box::new(move |i: Input| {
+      Box::new(move |s: Machine| {
         match (i, s) {
           (_, Machine { candies: 0, .. }) => s.clone(),
           // (Coin, Machine { locked: false, .. }) => s.clone(),
@@ -60,8 +60,8 @@ impl Machine {
             coins: coin,
           },
         }
-      }
-    }
+      })
+    })
   }
 }
 

@@ -84,22 +84,22 @@ impl<'a, S, A> State<'a, S, A> {
     Self::new(Box::new(move |_| ((), t.clone())))
   }
 
-  // pub fn sequence(sas: Vec<State<'a, S, A>>) -> State<'a, S, Vec<A>>
-  //   where
-  //     S: 'a,
-  //     A: 'a, {
-  //   Self::new(Box::new(move |s| {
-  //     let mut s_ = s;
-  //     let actions = sas;
-  //     let mut acc: Vec<A> = vec![];
-  //     for x in actions.into_iter() {
-  //       let (a, s2) = x.run(s_);
-  //       s_ = s2;
-  //       acc.push(a);
-  //     }
-  //     (acc, s_)
-  //   }))
-  // }
+  pub fn sequence(sas: Vec<State<'a, S, A>>) -> State<'a, S, Vec<A>>
+    where
+      S: 'a,
+      A: 'a, {
+    Self::new(Box::new(move |s| {
+      let mut s_ = s;
+      let actions = &sas;
+      let mut acc: Vec<A> = vec![];
+      for x in actions.into_iter() {
+        let (a, s2) = x.run(s_);
+        s_ = s2;
+        acc.push(a);
+      }
+      (acc, s_)
+    }))
+  }
 }
 
 #[cfg(test)]
