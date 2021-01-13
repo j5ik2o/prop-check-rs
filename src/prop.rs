@@ -35,12 +35,40 @@ pub struct Gen<'a, A> {
 }
 
 impl<'a, A> Gen<'a, A> {
+
   pub fn new<B>(b: State<RNG, B>) -> Gen<B> {
     Gen { sample: b }
   }
-  // pub fn map<'b, B: 'b, F>(self, f: F) -> Gen<'b, B> where F: Fn(A) -> B + 'b, B: Clone {
-  //   Self::new(self.sample.fmap(f))
-  // }
+
+  pub fn fmap<B, F>(self, f: F) -> Gen<'a, B>
+  where
+    F: FnOnce(A) -> B + 'a,
+    A: 'a,
+    B: Clone + 'a, {
+    Self::new(self.sample.fmap(f))
+  }
+
+  pub fn fmap2<'b, 'c, B, C, F>(self, g: Gen<'b, B>, f: F) -> Gen<'c, C>
+  where
+    F: FnOnce(A, B) -> C + 'c,
+    A: Clone + 'a,
+    B: Clone + 'b,
+    C: Clone + 'c,
+    'a: 'b,
+    'b: 'c {
+    Self::new(self.sample.fmap2(g.sample, f))
+  }
+
+  pub fn bind<B, F>(self, f: F) -> Gen<'a, B>
+  where
+    F: FnOnce(A) -> Gen<'a, B> + 'a,
+    A: 'a,
+    B: Clone + 'a, {
+    Self::new(self.sample.bind(|a| f(a).sample))
+  }
+
+
+
 }
 
 pub struct Prop<'a> {

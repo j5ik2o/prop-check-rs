@@ -32,11 +32,10 @@ impl Machine {
     Box::new(move |i: Input| {
       Box::new(move |s: Machine| {
         match (i, s) {
-          (_, Machine { candies: 0, .. }) => s.clone(),
           // (Coin, Machine { locked: false, .. }) => s.clone(),
           // (Turn, Machine { locked: true, .. }) => s.clone(),
           (
-            Coin,
+            Input::Coin,
             Machine {
               locked: true,
               candies: candy,
@@ -48,7 +47,7 @@ impl Machine {
             coins: coin + 1,
           },
           (
-            Turn,
+            Input::Turn,
             Machine {
               locked: false,
               candies: candy,
@@ -59,6 +58,7 @@ impl Machine {
             candies: candy - 1,
             coins: coin,
           },
+          (_, Machine { .. }) => s.clone(),
         }
       })
     })
@@ -67,7 +67,7 @@ impl Machine {
 
 #[cfg(test)]
 mod tests {
-  use crate::machine::{Machine, Input};
+  use crate::machine::{Input, Machine};
 
   #[test]
   fn candy() {
