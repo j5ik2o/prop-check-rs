@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct State<'a, S, A> {
   run_f: Rc<Box<dyn FnOnce(S) -> (A, S) + 'a>>,
 }
@@ -9,12 +9,20 @@ impl<'a, S, A> State<'a, S, A> {
   pub fn unit(a: A) -> State<'a, S, A>
   where
     A: 'a, {
-    Self::new(Rc::new(box |s| (a, s)))
+    Self::new(|s| (a, s))
   }
 
-  pub fn new<'b, T, B>(run_f: Rc<Box<dyn FnOnce(T) -> (B, T) + 'b>>) -> State<'b, T, B> {
-    State { run_f }
+  pub fn new<'b, T, B, F>(f: F) -> State<'b, T, B>
+  where
+    F: FnOnce(T) -> (B, T) + 'b, {
+    State {
+      run_f: Rc::new(Box::new(f)),
+    }
   }
+
+  // pub fn new<'b, T, B>(run_f: Rc<Box<dyn FnOnce(T) -> (B, T) + 'b>>) -> State<'b, T, B> {
+  //   State { run_f }
+  // }
 
   pub fn run(self, s: S) -> (A, S) {
     let f = Rc::try_unwrap(self.run_f).unwrap_or_else(|err| panic!());
@@ -24,7 +32,7 @@ impl<'a, S, A> State<'a, S, A> {
   pub fn pure<'b, T, B>(b: B) -> State<'b, T, B>
   where
     B: Clone + 'b, {
-    Self::new(Rc::new(box move |s| (b.clone(), s)))
+    Self::new(move |s| (b.clone(), s))
   }
 
   pub fn fmap<'b, B, F>(self, f: F) -> State<'b, S, B>
@@ -56,10 +64,10 @@ impl<'a, S, A> State<'a, S, A> {
     A: 'a,
     S: 'a,
     'a: 'b, {
-    Self::new(Rc::new(box move |s| {
+    Self::new(move |s| {
       let (a, s1) = self.run(s);
       f(a).run(s1)
-    }))
+    })
   }
 
   pub fn modify<'b, T, F>(f: F) -> State<'b, T, ()>
@@ -73,20 +81,20 @@ impl<'a, S, A> State<'a, S, A> {
   pub fn get<'b, T>() -> State<'b, T, T>
   where
     T: Clone + 'b, {
-    Self::new(Rc::new(box move |t| (t.clone(), t)))
+    Self::new(move |t: T| (t.clone(), t))
   }
 
   pub fn set<'b, T>(t: T) -> State<'b, T, ()>
   where
     T: Clone + 'b, {
-    Self::new(Rc::new(box move |_| ((), t.clone())))
+    Self::new(move |_| ((), t.clone()))
   }
 
   pub fn sequence(sas: Vec<State<'a, S, A>>) -> State<'a, S, Vec<A>>
   where
     S: 'a,
     A: 'a, {
-    Self::new(Rc::new(box move |s| {
+    Self::new(move |s| {
       let mut s_ = s;
       let actions = sas;
       let mut acc: Vec<A> = vec![];
@@ -96,7 +104,7 @@ impl<'a, S, A> State<'a, S, A> {
         acc.push(a);
       }
       (acc, s_)
-    }))
+    })
   }
 }
 
@@ -106,7 +114,7 @@ where
   A: Default,
 {
   fn default() -> Self {
-    Self::new(Rc::new(box |_| (A::default(), S::default())))
+    Self::new(|_| (A::default(), S::default()))
   }
 }
 

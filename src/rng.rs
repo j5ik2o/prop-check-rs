@@ -82,7 +82,7 @@ impl RNG {
     (acc, current_rng)
   }
 
-  pub fn unit<'a, A: Clone +'a>(a: A) -> BoxRand<'a, A> {
+  pub fn unit<'a, A: Clone + 'a>(a: A) -> BoxRand<'a, A> {
     Box::new(|rng: RNG| (a, rng))
   }
 

@@ -1,4 +1,6 @@
-use crate::rng::RNG;
+use std::rc::Rc;
+
+use crate::rng::{NextRandValue, RNG};
 use crate::state::State;
 
 pub type MaxSize = i32;
@@ -39,6 +41,17 @@ impl<'a, A> Gen<'a, A> {
     F: FnOnce() -> A,
     A: 'a, {
     Self::new(State::unit(f()))
+  }
+
+  pub fn bool() -> Gen<'a, bool>
+  where
+    A: 'a, {
+    Self::new(State::<'a, RNG, bool>::new(|rng: RNG| rng.next_bool()))
+  }
+
+  pub fn choose(start: u32, stop_exclusive: u32) -> Gen<'a, u32> {
+    Self::new(State::<'a, RNG, u32>::new(move |rng: RNG| rng.next_u32()))
+      .fmap(move |n| start.clone() + n % (stop_exclusive - start))
   }
 
   pub fn list_of_n_(n: u32, g: Gen<'a, A>) -> Gen<'a, Vec<A>>
@@ -141,4 +154,19 @@ impl<'a> Prop<'a> {
       Result::Proved => println!("+ OK, proved property."),
     }
   }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  // #[test]
+  // fn choose() {
+  //   let rng = RNG::new();
+  //   Gen::choose(1, 10)
+  //   let r = Gen::bool().sample.run(rng);
+  //
+  // }
+
+
 }
