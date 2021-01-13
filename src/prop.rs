@@ -1,4 +1,3 @@
-use crate::prop::Result::Falsified;
 use crate::rng::RNG;
 use crate::state::State;
 
@@ -35,6 +34,26 @@ pub struct Gen<'a, A> {
 }
 
 impl<'a, A> Gen<'a, A> {
+  pub fn unit<F>(f: F) -> Gen<'a, A>
+  where
+    F: FnOnce() -> A,
+    A: 'a, {
+    Self::new(State::unit(f()))
+  }
+
+  pub fn list_of_n_(n: u32, g: Gen<'a, A>) -> Gen<'a, Vec<A>>
+  where
+    A: Clone + 'a, {
+    let mut v: Vec<State<RNG, A>> = Vec::with_capacity(n as usize);
+    v.resize_with(n as usize, move || g.sample.clone());
+    Self::new(State::sequence(v))
+  }
+
+  pub fn list_of_n(self, size: u32) -> Gen<'a, Vec<A>>
+  where
+    A: Clone + 'a, {
+    Self::list_of_n_(size, self)
+  }
 
   pub fn new<B>(b: State<RNG, B>) -> Gen<B> {
     Gen { sample: b }
@@ -55,7 +74,7 @@ impl<'a, A> Gen<'a, A> {
     B: Clone + 'b,
     C: Clone + 'c,
     'a: 'b,
-    'b: 'c {
+    'b: 'c, {
     Self::new(self.sample.fmap2(g.sample, f))
   }
 
@@ -66,9 +85,6 @@ impl<'a, A> Gen<'a, A> {
     B: Clone + 'a, {
     Self::new(self.sample.bind(|a| f(a).sample))
   }
-
-
-
 }
 
 pub struct Prop<'a> {

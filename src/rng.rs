@@ -14,6 +14,13 @@ pub trait NextRandValue {
     let (i, r) = self.next_i32();
     (i as f32 / (std::i32::MAX as f32 + 1.0f32), r)
   }
+
+  fn next_bool(&self) -> (bool, Self)
+  where
+    Self: Sized, {
+    let (i, r) = self.next_i32();
+    ((i % 2) != 0, r)
+  }
 }
 
 #[derive(Clone, Debug)]
@@ -21,8 +28,14 @@ pub struct RNG {
   seed: i64,
 }
 
-type DynRand<'a, A> = dyn Fn(RNG) -> (A, RNG) + 'a;
+type DynRand<'a, A> = dyn FnOnce(RNG) -> (A, RNG) + 'a;
 type BoxRand<'a, A> = Box<DynRand<'a, A>>;
+
+impl Default for RNG {
+  fn default() -> Self {
+    Self::new()
+  }
+}
 
 impl NextRandValue for RNG {
   fn next_i32(&self) -> (i32, Self) {
@@ -38,49 +51,25 @@ impl RNG {
     RNG { seed: i64::MAX }
   }
 
-  pub fn int_double(&self) -> ((i32, f32), Self) {
+  pub fn i32_f32(&self) -> ((i32, f32), Self) {
     let (i, r1) = self.next_i32();
     let (d, r2) = r1.next_f32();
     ((i, d), r2)
   }
 
-  pub fn double_int(&self) -> ((f32, i32), Self) {
-    let ((i, d), r) = self.int_double();
+  pub fn f32_i32(&self) -> ((f32, i32), Self) {
+    let ((i, d), r) = self.i32_f32();
     ((d, i), r)
   }
 
-  pub fn double_3(&self) -> ((f32, f32, f32), Self) {
+  pub fn f32_3(&self) -> ((f32, f32, f32), Self) {
     let (d1, r1) = self.next_f32();
     let (d2, r2) = r1.next_f32();
     let (d3, r3) = r2.next_f32();
     ((d1, d2, d3), r3)
   }
 
-  pub fn ints1(self, count: u32) -> (Vec<i32>, Self) {
-    if count == 0 {
-      (vec![], self)
-    } else {
-      let (x, new_rng) = self.next_i32();
-      let (mut acc, new_rng) = new_rng.ints1(count - 1);
-      acc.push(x);
-      (acc, new_rng)
-    }
-  }
-
-  pub fn ints2(self, count: u32) -> (Vec<i32>, Self) {
-    fn go(count: u32, rng: RNG, mut acc: Vec<i32>) -> (Vec<i32>, RNG) {
-      if count == 0 {
-        (acc, rng)
-      } else {
-        let (x, new_rng) = rng.next_i32();
-        acc.push(x);
-        go(count - 1, new_rng, acc)
-      }
-    }
-    go(count, self, vec![])
-  }
-
-  pub fn ints3(self, count: u32) -> (Vec<i32>, Self) {
+  pub fn i32s(self, count: u32) -> (Vec<i32>, Self) {
     let mut index = count;
     let mut acc = vec![];
     let mut current_rng = self;
@@ -93,19 +82,13 @@ impl RNG {
     (acc, current_rng)
   }
 
-  pub fn ints_f<'a>(count: u32) -> BoxRand<'a, Vec<i32>> {
-    let mut fs: Vec<Box<DynRand<i32>>> = Vec::with_capacity(count as usize);
-    fs.resize_with(count as usize, || Self::int_value());
-    Self::sequence(fs)
-  }
-
-  pub fn unit<'a, A: Clone + 'a>(a: A) -> BoxRand<'a, A> {
-    Box::new(move |rng| (a.clone(), rng))
+  pub fn unit<'a, A: Clone +'a>(a: A) -> BoxRand<'a, A> {
+    Box::new(|rng: RNG| (a, rng))
   }
 
   pub fn sequence<'a, A: Clone + 'a, F>(fs: Vec<F>) -> BoxRand<'a, Vec<A>>
   where
-    F: Fn(RNG) -> (A, RNG) + 'a, {
+    F: FnOnce(RNG) -> (A, RNG) + 'a, {
     let unit = Self::unit(Vec::<A>::new());
     let result = fs.into_iter().fold(unit, |acc, e| {
       Self::map2(acc, e, |mut a, b| {
@@ -126,8 +109,8 @@ impl RNG {
 
   pub fn map<'a, A, B, F1, F2>(s: F1, f: F2) -> BoxRand<'a, B>
   where
-    F1: Fn(RNG) -> (A, RNG) + 'a,
-    F2: Fn(A) -> B + 'a, {
+    F1: FnOnce(RNG) -> (A, RNG) + 'a,
+    F2: FnOnce(A) -> B + 'a, {
     Box::new(move |rng| {
       let (a, rng2) = s(rng);
       (f(a), rng2)
@@ -136,9 +119,9 @@ impl RNG {
 
   pub fn map2<'a, F1, F2, F3, A, B, C>(ra: F1, rb: F2, f: F3) -> BoxRand<'a, C>
   where
-    F1: Fn(RNG) -> (A, RNG) + 'a,
-    F2: Fn(RNG) -> (B, RNG) + 'a,
-    F3: Fn(A, B) -> C + 'a, {
+    F1: FnOnce(RNG) -> (A, RNG) + 'a,
+    F2: FnOnce(RNG) -> (B, RNG) + 'a,
+    F3: FnOnce(A, B) -> C + 'a, {
     Box::new(move |rng| {
       let (a, r1) = ra(rng);
       let (b, r2) = rb(r1);
@@ -148,8 +131,8 @@ impl RNG {
 
   pub fn both<'a, F1, F2, A, B>(ra: F1, rb: F2) -> BoxRand<'a, (A, B)>
   where
-    F1: Fn(RNG) -> (A, RNG) + 'a,
-    F2: Fn(RNG) -> (B, RNG) + 'a, {
+    F1: FnOnce(RNG) -> (A, RNG) + 'a,
+    F2: FnOnce(RNG) -> (B, RNG) + 'a, {
     Self::map2(ra, rb, |a, b| (a, b))
   }
 
@@ -163,9 +146,9 @@ impl RNG {
 
   pub fn flat_map<'a, A, B, F, GF, BF>(f: F, g: GF) -> BoxRand<'a, B>
   where
-    F: Fn(RNG) -> (A, RNG) + 'a,
-    BF: Fn(RNG) -> (B, RNG),
-    GF: Fn(A) -> BF + 'a, {
+    F: FnOnce(RNG) -> (A, RNG) + 'a,
+    BF: FnOnce(RNG) -> (B, RNG),
+    GF: FnOnce(A) -> BF + 'a, {
     Box::new(move |rng| {
       let (a, r1) = f(rng);
       (g(a))(r1)
