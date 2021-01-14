@@ -2,9 +2,9 @@ use std::fmt::Display;
 use std::rc::Rc;
 
 use crate::gen::Gen;
-use crate::laziness::Stream;
 use crate::rng::{NextRandValue, RNG};
 use crate::state::State;
+use itertools::{Itertools, Unfold};
 
 pub type MaxSize = u32;
 pub type TestCases = u32;
@@ -79,22 +79,31 @@ impl<'a> Prop<'a> {
     }
   }
 
-  pub fn random_stream<A>(g: Gen<'a, A>, rng: RNG) -> Stream<'a, A>
-    where
-      A: Clone + 'a, {
-    Stream::<'a, A>::unfold(rng, Rc::new(Box::new(move |rng| Some(g.sample.clone().run(rng)))))
+  pub fn random_stream<A, GF>(g: GF, rng: RNG) -> Unfold<RNG, Box<dyn Fn(&mut RNG) -> Option<A>>>
+  where
+    GF: Fn() -> Gen<A> + 'static,
+    A: Clone + 'static, {
+    itertools::unfold(
+      rng,
+      Box::new(move |rng| {
+        let (a, s) = g().sample.run(rng.clone());
+        *rng = s;
+        Some(a)
+      }),
+    )
   }
 
-  pub fn for_all<A, F>(g: Gen<'a, A>, f: F) -> Prop<'a>
-    where
-      F: FnOnce(A) -> bool + 'static,
-      A: Clone + Display + 'static, {
+  pub fn for_all<A, GF, F>(g: GF, f: F) -> Prop<'a>
+  where
+    GF: Fn() -> Gen<A> + 'static,
+    F: Fn(A) -> bool + 'static,
+    A: Clone + Display + 'static, {
     Prop {
       run_f: Box::new(move |_, n, rng| {
-        Prop::random_stream(g.clone(), rng)
-          .zip(Stream::<'a, u32>::from(0))
-          .take(n)
-          .fmap(move |(a, i)| {
+        Prop::random_stream(g, rng)
+          .zip(itertools::unfold(0u32, move |n| Some(*n + 1)).into_iter())
+          .take(n as usize)
+          .map(move |(a, i): (A, u32)| {
             if f(a.clone()) {
               Result::Passed
             } else {
@@ -104,7 +113,7 @@ impl<'a> Prop<'a> {
               }
             }
           })
-          .find(Rc::new(Box::new(move |e| e.is_falsified())))
+          .find(move |e| e.is_falsified())
           .unwrap_or(Result::Passed)
       }),
     }
@@ -125,9 +134,15 @@ impl<'a> Prop<'a> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::gen::gen;
 
-#[test]
+  #[test]
   fn choose() {
-
+    let gen = || gen::bool();
+    let prop = Prop::for_all(gen, |a| {
+      println!("a = {}", a);
+      a == a
+    });
+    Prop::run_with_prop(prop, 1, 100, RNG::new());
   }
 }
