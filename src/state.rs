@@ -5,10 +5,6 @@ pub struct State<S, A> {
 }
 
 impl<S: 'static, A: 'static> State<S, A> {
-  pub fn cloned(self) -> Self {
-    Self::new(move |s| self.run(s))
-  }
-
   pub fn unit(a: A) -> State<S, A> {
     Self::new(|s| (a, s))
   }
@@ -107,7 +103,7 @@ mod tests {
   #[test]
   fn state() {
     let s = State::<i32, i32>::pure(10);
-    let r = s.cloned().run(10);
+    let r = s.run(10);
     println!("{:?}", r);
   }
 }

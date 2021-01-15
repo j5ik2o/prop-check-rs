@@ -35,54 +35,13 @@ impl IsFalsified for Result {
   }
 }
 
-pub struct Prop<'a> {
-  run_f: Box<dyn FnOnce(MaxSize, TestCases, RNG) -> Result + 'a>,
-}
-
-impl<'a> Prop<'a> {
-  pub fn run(self, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result {
-    (self.run_f)(max_size, test_cases, rng)
-  }
-
-  pub fn tag(self, msg: String) -> Prop<'a> {
-    Prop {
-      run_f: Box::new(move |max, n, rng| match self.run(max, n, rng) {
-        Result::Falsified {
-          failure: e,
-          successes: c,
-        } => Result::Falsified {
-          failure: format!("{}\n{}", msg, e),
-          successes: c,
-        },
-        x => x,
-      }),
-    }
-  }
-
-  pub fn and(self, p: Self) -> Prop<'a> {
-    Prop {
-      run_f: Box::new(
-        move |max: MaxSize, n: TestCases, rng: RNG| match self.run(max, n, rng.clone()) {
-          Result::Passed | Result::Proved => p.run(max, n, rng),
-          x => x,
-        },
-      ),
-    }
-  }
-
-  pub fn or(self, p: Self) -> Prop<'a> {
-    Prop {
-      run_f: Box::new(move |max, n, rng| match self.run(max, n, rng.clone()) {
-        Result::Falsified { failure: msg, .. } => p.tag(msg).run(max, n, rng),
-        x => x,
-      }),
-    }
-  }
+pub mod prop {
+  use super::*;
 
   pub fn random_stream<A, GF>(g: GF, rng: RNG) -> Unfold<RNG, Box<dyn Fn(&mut RNG) -> Option<A>>>
-  where
-    GF: Fn() -> Gen<A> + 'static,
-    A: Clone + 'static, {
+    where
+      GF: Fn() -> Gen<A> + 'static,
+      A: Clone + 'static, {
     itertools::unfold(
       rng,
       Box::new(move |rng| {
@@ -93,14 +52,14 @@ impl<'a> Prop<'a> {
     )
   }
 
-  pub fn for_all<A, GF, F>(g: GF, f: F) -> Prop<'a>
-  where
-    GF: Fn() -> Gen<A> + 'static,
-    F: Fn(A) -> bool + 'static,
-    A: Clone + Display + 'static, {
+  pub fn for_all<A, GF, F>(g: GF, f: F) -> Prop
+    where
+      GF: Fn() -> Gen<A> + 'static,
+      F: Fn(A) -> bool + 'static,
+      A: Clone + Display + 'static, {
     Prop {
       run_f: Box::new(move |_, n, rng| {
-        Prop::random_stream(g, rng)
+        random_stream(g, rng)
           .zip(itertools::unfold(0u32, move |n| Some(*n + 1)).into_iter())
           .take(n as usize)
           .map(move |(a, i): (A, u32)| {
@@ -131,6 +90,52 @@ impl<'a> Prop<'a> {
   }
 }
 
+pub struct Prop {
+  run_f: Box<dyn FnOnce(MaxSize, TestCases, RNG) -> Result>,
+}
+
+impl Prop {
+  pub fn run(self, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result {
+    (self.run_f)(max_size, test_cases, rng)
+  }
+
+  pub fn tag(self, msg: String) -> Prop {
+    Prop {
+      run_f: Box::new(move |max, n, rng| match self.run(max, n, rng) {
+        Result::Falsified {
+          failure: e,
+          successes: c,
+        } => Result::Falsified {
+          failure: format!("{}\n{}", msg, e),
+          successes: c,
+        },
+        x => x,
+      }),
+    }
+  }
+
+  pub fn and(self, p: Self) -> Prop {
+    Prop {
+      run_f: Box::new(
+        move |max: MaxSize, n: TestCases, rng: RNG| match self.run(max, n, rng.clone()) {
+          Result::Passed | Result::Proved => p.run(max, n, rng),
+          x => x,
+        },
+      ),
+    }
+  }
+
+  pub fn or(self, p: Self) -> Prop {
+    Prop {
+      run_f: Box::new(move |max, n, rng| match self.run(max, n, rng.clone()) {
+        Result::Falsified { failure: msg, .. } => p.tag(msg).run(max, n, rng),
+        x => x,
+      }),
+    }
+  }
+
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -138,11 +143,11 @@ mod tests {
 
   #[test]
   fn choose() {
-    let gen = || gen::bool();
-    let prop = Prop::for_all(gen, |a| {
+    let gf = || gen::choose_u32(1, 100);
+    let prop = prop::for_all(gf, |a| {
       println!("a = {}", a);
       a == a
     });
-    Prop::run_with_prop(prop, 1, 100, RNG::new());
+    prop::run_with_prop(prop, 1, 100, RNG::new());
   }
 }
