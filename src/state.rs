@@ -1,95 +1,77 @@
 use std::rc::Rc;
 
-#[derive(Clone)]
-pub struct State<'a, S, A> {
-  run_f: Rc<Box<dyn FnOnce(S) -> (A, S) + 'a>>,
+pub struct State<S, A> {
+  pub(crate) run_f: Box<dyn FnOnce(S) -> (A, S)>,
 }
 
-impl<'a, S, A> State<'a, S, A> {
-  pub fn unit(a: A) -> State<'a, S, A>
-  where
-    A: 'a, {
+impl<S: 'static, A: 'static> State<S, A> {
+  pub fn unit(a: A) -> State<S, A> {
     Self::new(|s| (a, s))
   }
 
-  pub fn new<'b, T, B, F>(f: F) -> State<'b, T, B>
+  pub fn new<T, B, F>(f: F) -> State<T, B>
   where
-    F: FnOnce(T) -> (B, T) + 'b, {
-    State {
-      run_f: Rc::new(Box::new(f)),
-    }
+    F: FnOnce(T) -> (B, T) + 'static, {
+    State { run_f: Box::new(f) }
   }
 
   pub fn run(self, s: S) -> (A, S) {
-    let f = Rc::try_unwrap(self.run_f).unwrap_or_else(|err| panic!());
-    f(s)
+    (self.run_f)(s)
   }
 
-  pub fn pure<'b, T, B>(b: B) -> State<'b, T, B>
+  pub fn pure<T, B>(b: B) -> State<T, B>
   where
-    B: Clone + 'b, {
+    B: Clone + 'static, {
     Self::new(move |s| (b.clone(), s))
   }
 
-  pub fn fmap<'b, B, F>(self, f: F) -> State<'b, S, B>
+  pub fn fmap<B, F>(self, f: F) -> State<S, B>
   where
-    F: FnOnce(A) -> B + 'b,
-    B: Clone + 'b,
-    A: 'a,
-    S: 'a,
-    'a: 'b, {
+    F: FnOnce(A) -> B + 'static,
+    B: Clone + 'static, {
     self.bind(move |a| Self::pure(f(a)))
   }
 
-  pub fn fmap2<'b, 'c, B, C, F>(self, sb: State<'b, S, B>, f: F) -> State<'c, S, C>
+  pub fn fmap2<B, C, F>(self, sb: State<S, B>, f: F) -> State<S, C>
   where
-    F: FnOnce(A, B) -> C + 'c,
-    A: Clone + 'a,
-    B: Clone + 'b,
-    C: Clone + 'c,
-    S: 'a,
-    'a: 'b,
-    'b: 'c, {
+    F: FnOnce(A, B) -> C + 'static,
+    A: Clone,
+    B: Clone + 'static,
+    C: Clone + 'static, {
     self.bind(move |a| sb.fmap(move |b| f(a.clone(), b.clone())))
   }
 
-  pub fn bind<'b, B, F>(self, f: F) -> State<'b, S, B>
+  pub fn bind<B, F>(self, f: F) -> State<S, B>
   where
-    F: FnOnce(A) -> State<'b, S, B> + 'b,
-    B: Clone + 'b,
-    A: 'a,
-    S: 'a,
-    'a: 'b, {
+    F: FnOnce(A) -> State<S, B> + 'static,
+    B: Clone + 'static, {
     Self::new(move |s| {
       let (a, s1) = self.run(s);
       f(a).run(s1)
     })
   }
 
-  pub fn modify<'b, T, F>(f: F) -> State<'b, T, ()>
+  pub fn modify<T, F>(f: F) -> State<T, ()>
   where
-    F: FnOnce(T) -> T + 'b,
-    T: Clone + 'b, {
+    F: FnOnce(T) -> T + 'static,
+    T: Clone + 'static, {
     let s = Self::get();
     s.bind(move |t: T| Self::set(f(t)))
   }
 
-  pub fn get<'b, T>() -> State<'b, T, T>
+  pub fn get<T>() -> State<T, T>
   where
-    T: Clone + 'b, {
+    T: Clone, {
     Self::new(move |t: T| (t.clone(), t))
   }
 
-  pub fn set<'b, T>(t: T) -> State<'b, T, ()>
+  pub fn set<T>(t: T) -> State<T, ()>
   where
-    T: Clone + 'b, {
+    T: Clone + 'static, {
     Self::new(move |_| ((), t.clone()))
   }
 
-  pub fn sequence(sas: Vec<State<'a, S, A>>) -> State<'a, S, Vec<A>>
-  where
-    S: 'a,
-    A: 'a, {
+  pub fn sequence(sas: Vec<State<S, A>>) -> State<S, Vec<A>> {
     Self::new(move |s| {
       let mut s_ = s;
       let actions = sas;
@@ -104,10 +86,10 @@ impl<'a, S, A> State<'a, S, A> {
   }
 }
 
-impl<'a, S, A> Default for State<'a, S, A>
+impl<S, A> Default for State<S, A>
 where
-  S: Default,
-  A: Default,
+  S: Default + 'static,
+  A: Default + 'static,
 {
   fn default() -> Self {
     Self::new(|_| (A::default(), S::default()))
@@ -116,7 +98,7 @@ where
 
 #[cfg(test)]
 mod tests {
-  use crate::state::*;
+  use super::*;
 
   #[test]
   fn state() {

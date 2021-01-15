@@ -14,3 +14,4 @@ num-bigint = "0.3"
 rust-fp-categories = "0.0.5"
 futures = { verison = "0.3.1", features = ["thread-pool"] }
 # tokio = { version = "1", features = ["full"] }
+itertools = "0.10.0"

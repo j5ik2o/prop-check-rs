@@ -1,10 +1,9 @@
 #![feature(slice_fill_with)]
 #![feature(box_syntax)]
-
+#[feature(clone_closures)]
 use crate::rng::RNG;
 
 mod gen;
-mod laziness;
 mod machine;
 mod prop;
 mod rng;
