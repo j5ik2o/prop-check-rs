@@ -1,6 +1,3 @@
-#![feature(slice_fill_with)]
-#![feature(box_syntax)]
-#[feature(clone_closures)]
 use crate::rng::RNG;
 
 mod gen;

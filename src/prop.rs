@@ -39,9 +39,9 @@ pub mod prop {
   use super::*;
 
   pub fn random_stream<A, GF>(g: GF, rng: RNG) -> Unfold<RNG, Box<dyn Fn(&mut RNG) -> Option<A>>>
-    where
-      GF: Fn() -> Gen<A> + 'static,
-      A: Clone + 'static, {
+  where
+    GF: Fn() -> Gen<A> + 'static,
+    A: Clone + 'static, {
     itertools::unfold(
       rng,
       Box::new(move |rng| {
@@ -53,10 +53,10 @@ pub mod prop {
   }
 
   pub fn for_all<A, GF, F>(g: GF, f: F) -> Prop
-    where
-      GF: Fn() -> Gen<A> + 'static,
-      F: Fn(A) -> bool + 'static,
-      A: Clone + Display + 'static, {
+  where
+    GF: Fn() -> Gen<A> + 'static,
+    F: Fn(A) -> bool + 'static,
+    A: Clone + Display + 'static, {
     Prop {
       run_f: Box::new(move |_, n, rng| {
         random_stream(g, rng)
@@ -133,7 +133,6 @@ impl Prop {
       }),
     }
   }
-
 }
 
 #[cfg(test)]
@@ -144,10 +143,15 @@ mod tests {
   #[test]
   fn choose() {
     let gf = || gen::choose_u32(1, 100);
-    let prop = prop::for_all(gf, |a| {
-      println!("a = {}", a);
+    let prop1 = prop::for_all(gf, |a| {
+      println!("prop1:a = {}", a);
       a == a
     });
+    let prop2 = prop::for_all(gf, |a| {
+      println!("prop2:a = {}", a);
+      a == a
+    });
+    let prop = prop1.and(prop2);
     prop::run_with_prop(prop, 1, 100, RNG::new());
   }
 }

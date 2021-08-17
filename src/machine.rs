@@ -14,7 +14,7 @@ struct Machine {
 }
 
 impl Machine {
-  fn simulate_machine<'a>(inputs: Vec<Input>) -> State<Machine, (i32, i32)> {
+  fn simulate_machine(inputs: Vec<Input>) -> State<Machine, (i32, i32)> {
     let mut xs = inputs
       .into_iter()
       .map(move |i| {
