@@ -1,1 +1,1 @@
-# rust-example
+# prop-check-rs
