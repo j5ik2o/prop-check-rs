@@ -58,7 +58,7 @@ where
       random_stream(g, rng)
         .zip(itertools::unfold(0u32, move |n| Some(*n + 1)).into_iter())
         .take(n as usize)
-        .map(move |(a, i): (A, u32)| {
+        .map(|(a, i): (A, u32)| {
           if f(a.clone()) {
             Result::Passed
           } else {
@@ -138,7 +138,7 @@ mod tests {
 
   #[test]
   fn choose() {
-    let gf = || Gens::choose_u32(1, 100);
+    let gf = || Gens::even(1, 100);
     let prop1 = prop::for_all(gf, |a| {
       println!("prop1:a = {}", a);
       a == a
