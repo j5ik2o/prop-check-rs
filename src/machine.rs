@@ -15,7 +15,7 @@ struct Machine {
 
 impl Machine {
   fn simulate_machine(inputs: Vec<Input>) -> State<Machine, (i32, i32)> {
-    let mut xs = inputs
+    let xs = inputs
       .into_iter()
       .map(move |i| {
         let uf: Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>> = Self::update();
