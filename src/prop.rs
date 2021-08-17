@@ -35,58 +35,54 @@ impl IsFalsified for Result {
   }
 }
 
-pub mod prop {
-  use super::*;
+pub fn random_stream<A, GF>(g: GF, rng: RNG) -> Unfold<RNG, Box<dyn Fn(&mut RNG) -> Option<A>>>
+where
+  GF: Fn() -> Gen<A> + 'static,
+  A: Clone + 'static, {
+  itertools::unfold(
+    rng,
+    Box::new(move |rng| {
+      let (a, s) = g().sample.run(rng.clone());
+      *rng = s;
+      Some(a)
+    }),
+  )
+}
 
-  pub fn random_stream<A, GF>(g: GF, rng: RNG) -> Unfold<RNG, Box<dyn Fn(&mut RNG) -> Option<A>>>
-  where
-    GF: Fn() -> Gen<A> + 'static,
-    A: Clone + 'static, {
-    itertools::unfold(
-      rng,
-      Box::new(move |rng| {
-        let (a, s) = g().sample.run(rng.clone());
-        *rng = s;
-        Some(a)
-      }),
-    )
-  }
-
-  pub fn for_all<A, GF, F>(g: GF, f: F) -> Prop
-  where
-    GF: Fn() -> Gen<A> + 'static,
-    F: Fn(A) -> bool + 'static,
-    A: Clone + Display + 'static, {
-    Prop {
-      run_f: Box::new(move |_, n, rng| {
-        random_stream(g, rng)
-          .zip(itertools::unfold(0u32, move |n| Some(*n + 1)).into_iter())
-          .take(n as usize)
-          .map(move |(a, i): (A, u32)| {
-            if f(a.clone()) {
-              Result::Passed
-            } else {
-              Result::Falsified {
-                failure: a.to_string(),
-                successes: i,
-              }
+pub fn for_all<A, GF, F>(g: GF, f: F) -> Prop
+where
+  GF: Fn() -> Gen<A> + 'static,
+  F: Fn(A) -> bool + 'static,
+  A: Clone + Display + 'static, {
+  Prop {
+    run_f: Box::new(move |_, n, rng| {
+      random_stream(g, rng)
+        .zip(itertools::unfold(0u32, move |n| Some(*n + 1)).into_iter())
+        .take(n as usize)
+        .map(move |(a, i): (A, u32)| {
+          if f(a.clone()) {
+            Result::Passed
+          } else {
+            Result::Falsified {
+              failure: a.to_string(),
+              successes: i,
             }
-          })
-          .find(move |e| e.is_falsified())
-          .unwrap_or(Result::Passed)
-      }),
-    }
+          }
+        })
+        .find(move |e| e.is_falsified())
+        .unwrap_or(Result::Passed)
+    }),
   }
+}
 
-  pub fn run_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) {
-    match p.run(max_size, test_cases, rng) {
-      Result::Falsified {
-        failure: msg,
-        successes: n,
-      } => println!("! Falsified after {} passed tests:\n {}", n, msg),
-      Result::Passed => println!("+ OK, passed {} tests.", test_cases),
-      Result::Proved => println!("+ OK, proved property."),
-    }
+pub fn run_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) {
+  match p.run(max_size, test_cases, rng) {
+    Result::Falsified {
+      failure: msg,
+      successes: n,
+    } => println!("! Falsified after {} passed tests:\n {}", n, msg),
+    Result::Passed => println!("+ OK, passed {} tests.", test_cases),
+    Result::Proved => println!("+ OK, proved property."),
   }
 }
 
@@ -138,7 +134,7 @@ impl Prop {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::gen::gen;
+  use crate::{prop, gen};
 
   #[test]
   fn choose() {
