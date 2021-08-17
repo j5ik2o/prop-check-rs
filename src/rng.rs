@@ -1,11 +1,39 @@
+use bigdecimal::Num;
+
 pub trait NextRandValue
 where
   Self: Sized, {
+  fn next_i64(&self) -> (i64, Self);
+
+  fn next_u64(&self) -> (u64, Self) {
+    let (i, r) = self.next_i64();
+    (if i < 0 { -(i + 1) as u64 } else { i as u64 }, r)
+  }
+
   fn next_i32(&self) -> (i32, Self);
 
   fn next_u32(&self) -> (u32, Self) {
     let (i, r) = self.next_i32();
     (if i < 0 { -(i + 1) as u32 } else { i as u32 }, r)
+  }
+
+  fn next_i16(&self) -> (i16, Self);
+
+  fn next_u16(&self) -> (u16, Self) {
+    let (i, r) = self.next_i16();
+    (if i < 0 { -(i + 1) as u16 } else { i as u16 }, r)
+  }
+
+  fn next_i8(&self) -> (i8, Self);
+
+  fn next_u8(&self) -> (u8, Self) {
+    let (i, r) = self.next_i8();
+    (if i < 0 { -(i + 1) as u8 } else { i as u8 }, r)
+  }
+
+  fn next_f64(&self) -> (f64, Self) {
+    let (i, r) = self.next_i64();
+    (i as f64 / (i64::MAX as f64 + 1.0f64), r)
   }
 
   fn next_f32(&self) -> (f32, Self) {
@@ -16,6 +44,48 @@ where
   fn next_bool(&self) -> (bool, Self) {
     let (i, r) = self.next_i32();
     ((i % 2) != 0, r)
+  }
+
+}
+
+pub trait RandGen<T: NextRandValue> where Self: Sized {
+  fn rnd_gen(rng: T) -> (Self, T);
+}
+
+impl<T: NextRandValue> RandGen<T> for i64 {
+  fn rnd_gen(rng: T) -> (Self, T) {
+    rng.next_i64()
+  }
+}
+
+impl<T: NextRandValue> RandGen<T> for u32 {
+  fn rnd_gen(rng: T) -> (Self, T) {
+    rng.next_u32()
+  }
+}
+
+impl<T: NextRandValue> RandGen<T> for i32 {
+  fn rnd_gen(rng: T) -> (Self, T) {
+    rng.next_i32()
+  }
+}
+
+impl<T: NextRandValue> RandGen<T> for i16 {
+  fn rnd_gen(rng: T) -> (Self, T) {
+    rng.next_i16()
+  }
+}
+
+impl<T: NextRandValue> RandGen<T> for f32 {
+  fn rnd_gen(rng: T) -> (Self, T) {
+    rng.next_f32()
+  }
+}
+
+
+impl<T: NextRandValue> RandGen<T> for bool {
+  fn rnd_gen(rng: T) -> (Self, T) {
+    rng.next_bool()
   }
 }
 
@@ -34,17 +104,39 @@ impl Default for RNG {
 }
 
 impl NextRandValue for RNG {
-  fn next_i32(&self) -> (i32, Self) {
+
+  fn next_i64(&self) -> (i64, Self) {
     let new_seed = self.seed.wrapping_mul(0x5DEECE66D) & 0xFFFFFFFFFFFF;
     let next_rng = RNG { seed: new_seed };
-    let n = (new_seed >> 16) as i32;
+    (new_seed, next_rng)
+  }
+
+  fn next_i32(&self) -> (i32, Self) {
+    let (n, next_rng) = self.next_i64();
+    let n = (n >> 16) as i32;
+    (n, next_rng)
+  }
+
+  fn next_i16(&self) -> (i16, Self) {
+    let (n, next_rng) = self.next_i64();
+    let n = (n >> 16) as i16;
+    (n, next_rng)
+  }
+
+  fn next_i8(&self) -> (i8, Self) {
+    let (n, next_rng) = self.next_i64();
+    let n = (n >> 16) as i8;
     (n, next_rng)
   }
 }
 
 impl RNG {
   pub fn new() -> Self {
-    RNG { seed: i64::MAX }
+    Self { seed: i64::MAX }
+  }
+
+  pub fn with_seed(seed: i64) -> Self {
+    Self { seed }
   }
 
   pub fn i32_f32(&self) -> ((i32, f32), Self) {
@@ -168,13 +260,14 @@ impl RNG {
 
 #[cfg(test)]
 mod tests {
-  use crate::rng::{NextRandValue, RNG};
+  use crate::rng::{NextRandValue, RNG, RandGen};
 
   #[test]
   fn next_int() {
-    let (v1, r1) = RNG::new().next_i32();
+    let rng = RNG::new();
+    let (v1, r1) = i32::rnd_gen(rng);
     println!("{:?}", v1);
-    let (v2, _) = r1.next_u32();
+    let (v2, _) = u32::rnd_gen(r1);
     println!("{:?}", v2);
   }
 }

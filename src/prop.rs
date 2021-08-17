@@ -1,10 +1,9 @@
 use std::fmt::Display;
 
-
 use crate::gen::Gen;
-use crate::rng::{RNG};
+use crate::rng::RNG;
 
-use itertools::{Unfold};
+use itertools::Unfold;
 
 pub type MaxSize = u32;
 pub type TestCases = u32;
@@ -135,10 +134,11 @@ impl Prop {
 mod tests {
   use super::*;
   use crate::{gen, prop};
+  use crate::gen::Gens;
 
   #[test]
   fn choose() {
-    let gf = || gen::choose_u32(1, 100);
+    let gf = || Gens::choose_u32(1, 100);
     let prop1 = prop::for_all(gf, |a| {
       println!("prop1:a = {}", a);
       a == a
