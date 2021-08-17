@@ -134,7 +134,7 @@ impl Prop {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::{prop, gen};
+  use crate::{gen, prop};
 
   #[test]
   fn choose() {

@@ -5,20 +5,13 @@ pub struct Gen<A> {
   pub sample: State<RNG, A>,
 }
 
-pub fn unit<A, F>(f: F) -> Gen<A>
+pub fn list_of_n<B, GF>(n: u32, g: GF) -> Gen<Vec<B>>
 where
-  F: FnOnce() -> A,
-  A: 'static, {
-  Gen::<A>::new(State::unit(f()))
-}
-
-pub fn list_of_n<A, GF>(n: u32, g: GF) -> Gen<Vec<A>>
-where
-  GF: Fn() -> Gen<A>,
-  A: Clone + 'static, {
-  let mut v: Vec<State<RNG, A>> = Vec::with_capacity(n as usize);
+  GF: Fn() -> Gen<B>,
+  B: Clone + 'static, {
+  let mut v: Vec<State<RNG, B>> = Vec::with_capacity(n as usize);
   v.resize_with(n as usize, move || g().sample);
-  Gen::<A>::new(State::sequence(v))
+  Gen::<B>::new(State::sequence(v))
 }
 
 pub fn bool() -> Gen<bool> {
@@ -47,7 +40,7 @@ pub fn even(start: u32, stop_exclusive: u32) -> Gen<u32> {
       stop_exclusive
     },
   )
-  .fmap(move |n| if n % 2 == 0 { n + 1 } else { n })
+  .fmap(|n| if n % 2 == 0 { n + 1 } else { n })
 }
 
 pub fn odd(start: u32, stop_exclusive: u32) -> Gen<u32> {
@@ -63,6 +56,13 @@ pub fn odd(start: u32, stop_exclusive: u32) -> Gen<u32> {
 }
 
 impl<A: 'static> Gen<A> {
+  pub fn unit<B, F>(f: F) -> Gen<B>
+  where
+    F: FnOnce() -> B,
+    B: 'static, {
+    Gen::<B>::new(State::unit(f()))
+  }
+
   pub fn new<B>(b: State<RNG, B>) -> Gen<B> {
     Gen { sample: b }
   }
