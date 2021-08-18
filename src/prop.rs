@@ -135,15 +135,15 @@ impl Prop {
 mod tests {
   use super::*;
   use crate::gen::Gens;
-  use crate::{gen, prop};
-  use std::slice::Iter;
+  use crate::prop;
+
   use itertools::Itertools;
   use std::ops::RangeInclusive;
 
   #[test]
   fn choose() {
     let gf = || {
-      let range: RangeInclusive<i32> = (1..=10);
+      let range: RangeInclusive<i32> = 1..=10;
       let vec = range.collect_vec();
       Gens::one_of_vec(vec)
     };

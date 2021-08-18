@@ -6,9 +6,6 @@ use crate::gen::one::One;
 use crate::rng::{NextRandValue, RNG};
 use crate::state::State;
 use bigdecimal::Num;
-use std::ops::{Range, RangeInclusive};
-use itertools::Itertools;
-use std::hash::Hash;
 
 pub struct Gens;
 
@@ -99,8 +96,7 @@ impl Gens {
   }
 
   pub fn one_of_vec<T: Choose + Clone + 'static>(values: Vec<T>) -> Gen<T> {
-    Self::choose(0usize, values.len() - 1)
-        .fmap(move |idx| values[idx as usize].clone())
+    Self::choose(0usize, values.len() - 1).fmap(move |idx| values[idx as usize].clone())
   }
 
   pub fn choose<T: Choose>(min: T, max: T) -> Gen<T> {

@@ -1,5 +1,3 @@
-use bigdecimal::Num;
-
 pub trait NextRandValue
 where
   Self: Sized, {
@@ -260,7 +258,7 @@ impl RNG {
 
 #[cfg(test)]
 mod tests {
-  use crate::rng::{NextRandValue, RandGen, RNG};
+  use crate::rng::{RandGen, RNG};
 
   #[test]
   fn next_int() {
