@@ -139,7 +139,7 @@ mod tests {
 
   #[test]
   fn choose() {
-    let gf = || Gens::even(1, 100);
+    let gf = || Gens::choose('a', 'z');
     let prop1 = prop::for_all(gf, |a| {
       println!("prop1:a = {}", a);
       a == a
