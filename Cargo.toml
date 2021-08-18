@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = ["Junichi Kato <j5ik2o@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[badges]
+github = { repository = "j5ik2o/prop-check-rs", workflow = "Rust" }
 
 [dependencies]
 rand = { version = "0.8.1" }
