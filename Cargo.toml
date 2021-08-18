@@ -11,7 +11,7 @@ rand = { version = "0.8.1" }
 once_cell = "1.5.2"
 bigdecimal = "0.2.0"
 iso-4217 = "0.1"
-num-bigint = "0.3"
+num-bigint = "0.4"
 rust-fp-categories = "0.0.5"
 futures = { verison = "0.3.1", features = ["thread-pool"] }
 # tokio = { version = "1", features = ["full"] }
