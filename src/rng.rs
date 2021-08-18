@@ -133,8 +133,8 @@ impl RNG {
     Self { seed: i64::MAX }
   }
 
-  pub fn with_seed(seed: i64) -> Self {
-    Self { seed }
+  pub fn with_seed(&mut self, seed: i64) {
+    self.seed = seed;
   }
 
   pub fn i32_f32(&self) -> ((i32, f32), Self) {
