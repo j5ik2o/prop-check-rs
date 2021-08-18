@@ -32,6 +32,30 @@ impl Choose for u32 {
   }
 }
 
+impl Choose for i16 {
+  fn choose(min: Self, max: Self) -> Gen<Self> {
+    Gens::choose_i16(min, max)
+  }
+}
+
+impl Choose for u16 {
+  fn choose(min: Self, max: Self) -> Gen<Self> {
+    Gens::choose_u16(min, max)
+  }
+}
+
+impl Choose for i8 {
+  fn choose(min: Self, max: Self) -> Gen<Self> {
+    Gens::choose_i8(min, max)
+  }
+}
+
+impl Choose for u8 {
+  fn choose(min: Self, max: Self) -> Gen<Self> {
+    Gens::choose_u8(min, max)
+  }
+}
+
 impl Gens {
   pub fn list_of_n<B, GF>(n: usize, g: GF) -> Gen<Vec<B>>
   where

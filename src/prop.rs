@@ -55,8 +55,9 @@ where
   A: Clone + Display + 'static, {
   Prop {
     run_f: Box::new(move |_, n, rng| {
+      let nl = itertools::iterate(1, |&i| i + 1).into_iter();
       random_stream(g, rng)
-        .zip(itertools::unfold(0u32, move |n| Some(*n + 1)).into_iter())
+        .zip(nl)
         .take(n as usize)
         .map(|(a, i): (A, u32)| {
           if f(a.clone()) {
