@@ -45,10 +45,11 @@ where
     let (i, r) = self.next_i32();
     ((i % 2) != 0, r)
   }
-
 }
 
-pub trait RandGen<T: NextRandValue> where Self: Sized {
+pub trait RandGen<T: NextRandValue>
+where
+  Self: Sized, {
   fn rnd_gen(rng: T) -> (Self, T);
 }
 
@@ -82,7 +83,6 @@ impl<T: NextRandValue> RandGen<T> for f32 {
   }
 }
 
-
 impl<T: NextRandValue> RandGen<T> for bool {
   fn rnd_gen(rng: T) -> (Self, T) {
     rng.next_bool()
@@ -104,28 +104,28 @@ impl Default for RNG {
 }
 
 impl NextRandValue for RNG {
-
   fn next_i64(&self) -> (i64, Self) {
     let new_seed = self.seed.wrapping_mul(0x5DEECE66D) & 0xFFFFFFFFFFFF;
     let next_rng = RNG { seed: new_seed };
-    (new_seed, next_rng)
+    let n = (new_seed >> 16) as i64;
+    (n, next_rng)
   }
 
   fn next_i32(&self) -> (i32, Self) {
     let (n, next_rng) = self.next_i64();
-    let n = (n >> 16) as i32;
+    let n = n as i32;
     (n, next_rng)
   }
 
   fn next_i16(&self) -> (i16, Self) {
     let (n, next_rng) = self.next_i64();
-    let n = (n >> 16) as i16;
+    let n = n as i16;
     (n, next_rng)
   }
 
   fn next_i8(&self) -> (i8, Self) {
     let (n, next_rng) = self.next_i64();
-    let n = (n >> 16) as i8;
+    let n = n as i8;
     (n, next_rng)
   }
 }
@@ -260,7 +260,7 @@ impl RNG {
 
 #[cfg(test)]
 mod tests {
-  use crate::rng::{NextRandValue, RNG, RandGen};
+  use crate::rng::{NextRandValue, RandGen, RNG};
 
   #[test]
   fn next_int() {

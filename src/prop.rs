@@ -134,21 +134,23 @@ impl Prop {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::{gen, prop};
   use crate::gen::Gens;
+  use crate::{gen, prop};
+  use std::slice::Iter;
+  use itertools::Itertools;
+  use std::ops::RangeInclusive;
 
   #[test]
   fn choose() {
-    let gf = || Gens::choose('a', 'z');
-    let prop1 = prop::for_all(gf, |a| {
+    let gf = || {
+      let range: RangeInclusive<i32> = (1..=10);
+      let vec = range.collect_vec();
+      Gens::one_of_vec(vec)
+    };
+    let prop = prop::for_all(gf, |a| {
       println!("prop1:a = {}", a);
       a == a
     });
-    let prop2 = prop::for_all(gf, |a| {
-      println!("prop2:a = {}", a);
-      a == a
-    });
-    let prop = prop1.and(prop2);
     prop::run_with_prop(prop, 1, 100, RNG::new());
   }
 }
