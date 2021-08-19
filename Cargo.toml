@@ -1,12 +1,13 @@
 [package]
 name = "prop-check-rs"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Junichi Kato <j5ik2o@gmail.com>"]
 description = "A Property-based testing Library in Rust"
 repository="https://github.com/j5ik2o/prop-check-rs"
 readme = "./README.md"
 license = "MIT OR Apache-2.0"
 edition = "2018"
+keywords = ["testing", "property-based-testing"]
 
 [badges]
 github = { repository = "j5ik2o/prop-check-rs", workflow = "Rust" }
