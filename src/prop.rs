@@ -1,9 +1,10 @@
 use std::fmt::Display;
 
+use anyhow::*;
+use itertools::Unfold;
+
 use crate::gen::Gen;
 use crate::rng::RNG;
-
-use itertools::Unfold;
 
 pub type MaxSize = u32;
 pub type TestCases = u32;
@@ -15,7 +16,7 @@ pub trait IsFalsified {
 }
 
 #[derive(Clone)]
-pub enum Result {
+pub enum PropResult {
   Passed,
   Falsified {
     failure: FailedCase,
@@ -24,12 +25,12 @@ pub enum Result {
   Proved,
 }
 
-impl IsFalsified for Result {
+impl IsFalsified for PropResult {
   fn is_falsified(&self) -> bool {
     match self {
-      Result::Passed => false,
-      Result::Falsified { .. } => true,
-      Result::Proved => false,
+      PropResult::Passed => false,
+      PropResult::Falsified { .. } => true,
+      PropResult::Proved => false,
     }
   }
 }
@@ -61,47 +62,45 @@ where
         .take(n as usize)
         .map(|(a, i): (A, u32)| {
           if f(a.clone()) {
-            Result::Passed
+            PropResult::Passed
           } else {
-            Result::Falsified {
+            PropResult::Falsified {
               failure: a.to_string(),
               successes: i,
             }
           }
         })
         .find(move |e| e.is_falsified())
-        .unwrap_or(Result::Passed)
+        .unwrap_or(PropResult::Passed)
     }),
   }
 }
 
-pub fn run_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) {
-  match p.run(max_size, test_cases, rng) {
-    Result::Falsified {
-      failure: msg,
-      successes: n,
-    } => println!("! Falsified after {} passed tests:\n {}", n, msg),
-    Result::Passed => println!("+ OK, passed {} tests.", test_cases),
-    Result::Proved => println!("+ OK, proved property."),
+pub fn run_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result<String> {
+ match p.run(max_size, test_cases, rng) {
+    PropResult::Passed => Ok(format!("+ OK, passed {} tests.", test_cases)) ,
+    PropResult::Proved => Ok("+ OK, proved property.".to_string()),
+    PropResult::Falsified {  failure: msg,
+      successes: n, } => Err(anyhow!("! Falsified after {} passed tests:\n {}", msg, n))
   }
 }
 
 pub struct Prop {
-  run_f: Box<dyn FnOnce(MaxSize, TestCases, RNG) -> Result>,
+  run_f: Box<dyn FnOnce(MaxSize, TestCases, RNG) -> PropResult>,
 }
 
 impl Prop {
-  pub fn run(self, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result {
+  pub fn run(self, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> PropResult {
     (self.run_f)(max_size, test_cases, rng)
   }
 
   pub fn tag(self, msg: String) -> Prop {
     Prop {
       run_f: Box::new(move |max, n, rng| match self.run(max, n, rng) {
-        Result::Falsified {
+        PropResult::Falsified {
           failure: e,
           successes: c,
-        } => Result::Falsified {
+        } => PropResult::Falsified {
           failure: format!("{}\n{}", msg, e),
           successes: c,
         },
@@ -114,7 +113,7 @@ impl Prop {
     Prop {
       run_f: Box::new(
         move |max: MaxSize, n: TestCases, rng: RNG| match self.run(max, n, rng.clone()) {
-          Result::Passed | Result::Proved => p.run(max, n, rng),
+          PropResult::Passed | PropResult::Proved => p.run(max, n, rng),
           x => x,
         },
       ),
@@ -124,7 +123,7 @@ impl Prop {
   pub fn or(self, p: Self) -> Prop {
     Prop {
       run_f: Box::new(move |max, n, rng| match self.run(max, n, rng.clone()) {
-        Result::Falsified { failure: msg, .. } => p.tag(msg).run(max, n, rng),
+        PropResult::Falsified { failure: msg, .. } => p.tag(msg).run(max, n, rng),
         x => x,
       }),
     }
@@ -133,24 +132,25 @@ impl Prop {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+  use std::ops::RangeInclusive;
+
+  use itertools::Itertools;
+
   use crate::gen::Gens;
   use crate::prop;
 
-  use itertools::Itertools;
-  use std::ops::RangeInclusive;
+  use super::*;
+  use anyhow::Result;
 
   #[test]
-  fn choose() {
+  fn choose() -> Result<(), Error> {
     let gf = || {
-      let range: RangeInclusive<i32> = 1..=10;
-      let vec = range.collect_vec();
-      Gens::one_of_vec(vec)
+      Gens::one_of_vec(vec!['a', 'b', 'c', 'x', 'y', 'z'])
     };
     let prop = prop::for_all(gf, |a| {
       println!("prop1:a = {}", a);
       a == a
     });
-    prop::run_with_prop(prop, 1, 100, RNG::new());
+    prop::run_with_prop(prop, 1, 100, RNG::new()).map(|_| ())
   }
 }

@@ -19,7 +19,7 @@ Add this to your `Cargo.toml`:
 
 ## Usage
 
-TODO
+
 
 {{readme}}
 

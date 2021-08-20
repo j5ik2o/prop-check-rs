@@ -21,7 +21,14 @@ prop-check-rs = "<<version>>"
 
 TODO
 
+Cargo subcommand that extract documentation from your crate's doc comments that you can use to
+populate your README.md.
 
+## Installation
+
+```sh
+cargo install cargo-readme
+```
 
 ## License
 
