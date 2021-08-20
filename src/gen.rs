@@ -10,9 +10,9 @@ use bigdecimal::Num;
 pub struct Gens;
 
 impl Gens {
-  pub fn list_of_n<B, GF>(n: usize, g: GF) -> Gen<Vec<B>>
+  pub fn list_of_n<B, GF>(n: usize, mut g: GF) -> Gen<Vec<B>>
   where
-    GF: Fn() -> Gen<B>,
+    GF: FnMut() -> Gen<B>,
     B: Clone + 'static, {
     let mut v: Vec<State<RNG, B>> = Vec::with_capacity(n);
     v.resize_with(n, move || g().sample);
@@ -209,9 +209,9 @@ pub struct Gen<A> {
 }
 
 impl<A: 'static> Gen<A> {
-  pub fn unit<B, F>(f: F) -> Gen<B>
+  pub fn unit<B, F>(mut f: F) -> Gen<B>
   where
-    F: FnOnce() -> B,
+    F: FnMut() -> B,
     B: 'static, {
     Gen::<B>::new(State::unit(f()))
   }
@@ -220,26 +220,26 @@ impl<A: 'static> Gen<A> {
     Gen { sample: b }
   }
 
-  pub fn fmap<B, F>(self, f: F) -> Gen<B>
+  pub fn fmap<B, F>(self,mut f: F) -> Gen<B>
   where
-    F: FnOnce(A) -> B + 'static,
+    F: FnMut(A) -> B + 'static,
     B: Clone + 'static, {
     Self::new(self.sample.fmap(f))
   }
 
-  pub fn fmap2<B, C, F>(self, g: Gen<B>, f: F) -> Gen<C>
+  pub fn fmap2<B, C, F>(self, g: Gen<B>, mut f: F) -> Gen<C>
   where
-    F: FnOnce(A, B) -> C + 'static,
+    F: FnMut(A, B) -> C + 'static,
     A: Clone,
     B: Clone + 'static,
     C: Clone + 'static, {
     Self::new(self.sample.fmap2(g.sample, f))
   }
 
-  pub fn bind<B, F>(self, f: F) -> Gen<B>
+  pub fn bind<B, F>(self, mut f: F) -> Gen<B>
   where
-    F: FnOnce(A) -> Gen<B> + 'static,
+    F: FnMut(A) -> Gen<B> + 'static,
     B: Clone + 'static, {
-    Self::new(self.sample.bind(|a| f(a).sample))
+    Self::new(self.sample.bind(move |a| f(a).sample))
   }
 }

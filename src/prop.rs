@@ -49,10 +49,10 @@ where
   )
 }
 
-pub fn for_all<A, GF, F>(g: GF, f: F) -> Prop
+pub fn for_all<A, GF, F>(g: GF, mut f: F) -> Prop
 where
   GF: Fn() -> Gen<A> + 'static,
-  F: Fn(A) -> bool + 'static,
+  F: FnMut(A) -> bool + 'static,
   A: Clone + Display + 'static, {
   Prop {
     run_f: Box::new(move |_, n, rng| {
@@ -144,10 +144,12 @@ mod tests {
 
   #[test]
   fn choose() -> Result<(), Error> {
+    let mut counter = 0;
     let gf = || {
       Gens::one_of_vec(vec!['a', 'b', 'c', 'x', 'y', 'z'])
     };
-    let prop = prop::for_all(gf, |a| {
+    let prop = prop::for_all(gf, move |a| {
+      counter += 1;
       println!("prop1:a = {}", a);
       a == a
     });
