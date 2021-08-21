@@ -103,15 +103,16 @@ impl Gens {
     Choose::choose(min, max)
   }
 
-  pub fn choose_char(start: char, stop_exclusive: char) -> Gen<char> {
-    Self::choose_u8(start as u8, stop_exclusive as u8).fmap(|b| b as char)
+  pub fn choose_char(min: char, max: char) -> Gen<char> {
+    let chars = (min..=max).into_iter().collect::<Vec<char>>();
+    Self::one_of_vec(chars)
   }
 
-  pub fn choose_i64(start: i64, stop_exclusive: i64) -> Gen<i64> {
+  pub fn choose_i64(min: i64, max: i64) -> Gen<i64> {
     Gen {
       sample: State::<RNG, i64>::new(move |rng: RNG| rng.next_i64()),
     }
-    .fmap(move |n| start + n % (stop_exclusive - start))
+    .fmap(move |n| min + n % (max - min + 1))
   }
 
   pub fn choose_u64(min: u64, max: u64) -> Gen<u64> {
