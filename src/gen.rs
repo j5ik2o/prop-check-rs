@@ -220,7 +220,7 @@ impl<A: 'static> Gen<A> {
     Gen { sample: b }
   }
 
-  pub fn fmap<B, F>(self,mut f: F) -> Gen<B>
+  pub fn fmap<B, F>(self, mut f: F) -> Gen<B>
   where
     F: FnMut(A) -> B + 'static,
     B: Clone + 'static, {

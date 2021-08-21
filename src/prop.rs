@@ -35,9 +35,9 @@ impl IsFalsified for PropResult {
   }
 }
 
-pub fn random_stream<A, GF>(g: GF, rng: RNG) -> Unfold<RNG, Box<dyn Fn(&mut RNG) -> Option<A>>>
+pub fn random_stream<A, GF>(mut g: GF, rng: RNG) -> Unfold<RNG, Box<dyn FnMut(&mut RNG) -> Option<A>>>
 where
-  GF: Fn() -> Gen<A> + 'static,
+  GF: FnMut() -> Gen<A> + 'static,
   A: Clone + 'static, {
   itertools::unfold(
     rng,
@@ -49,9 +49,9 @@ where
   )
 }
 
-pub fn for_all<A, GF, F>(g: GF, mut f: F) -> Prop
+pub fn for_all<A, GF, F>(mut g: GF, mut f: F) -> Prop
 where
-  GF: Fn() -> Gen<A> + 'static,
+  GF: FnMut() -> Gen<A> + 'static,
   F: FnMut(A) -> bool + 'static,
   A: Clone + Display + 'static, {
   Prop {
@@ -77,11 +77,34 @@ where
 }
 
 pub fn run_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result<String> {
- match p.run(max_size, test_cases, rng) {
-    PropResult::Passed => Ok(format!("+ OK, passed {} tests.", test_cases)) ,
+  match p.run(max_size, test_cases, rng) {
+    PropResult::Passed => Ok(format!("+ OK, passed {} tests.", test_cases)),
     PropResult::Proved => Ok("+ OK, proved property.".to_string()),
-    PropResult::Falsified {  failure: msg,
-      successes: n, } => Err(anyhow!("! Falsified after {} passed tests:\n {}", msg, n))
+    PropResult::Falsified {
+      failure: msg,
+      successes: n,
+    } => Err(anyhow!("! Falsified after {} passed tests:\n {}", msg, n)),
+  }
+}
+
+pub fn test_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result<()> {
+  match p.run(max_size, test_cases, rng) {
+    PropResult::Passed => {
+      log::info!("+ OK, passed {} tests.", test_cases);
+      Ok(())
+    }
+    PropResult::Proved => {
+      log::info!("{}", "+ OK, proved property.".to_string());
+      Ok(())
+    }
+    PropResult::Falsified {
+      failure: msg,
+      successes: n,
+    } => {
+      let error_message = format!("! Falsified after {} passed tests:\n {}", msg, n);
+      log::error!("{}", error_message);
+      Err(anyhow!(error_message))
+    }
   }
 }
 
@@ -132,6 +155,7 @@ impl Prop {
 
 #[cfg(test)]
 mod tests {
+  use log::{debug, error, info, log_enabled, Level};
   use std::ops::RangeInclusive;
 
   use itertools::Itertools;
@@ -141,18 +165,23 @@ mod tests {
 
   use super::*;
   use anyhow::Result;
+  use std::env;
+
+  fn init() {
+    env::set_var("RUST_LOG", "info");
+    let _ = env_logger::builder().is_test(true).try_init();
+  }
 
   #[test]
   fn choose() -> Result<(), Error> {
+    init();
     let mut counter = 0;
-    let gf = || {
-      Gens::one_of_vec(vec!['a', 'b', 'c', 'x', 'y', 'z'])
-    };
+    let gf = || Gens::one_of_vec(vec!['a', 'b', 'c', 'x', 'y', 'z']);
     let prop = prop::for_all(gf, move |a| {
       counter += 1;
-      println!("prop1:a = {}", a);
+      info!("prop1:a = {}", a);
       a == a
     });
-    prop::run_with_prop(prop, 1, 100, RNG::new()).map(|_| ())
+    prop::test_with_prop(prop, 1, 100, RNG::new())
   }
 }
