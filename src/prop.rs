@@ -49,7 +49,7 @@ where
   )
 }
 
-pub fn for_all<A, GF, F>(mut g: GF, mut f: F) -> Prop
+pub fn for_all<A, GF, F>(g: GF, mut f: F) -> Prop
 where
   GF: FnMut() -> Gen<A> + 'static,
   F: FnMut(A) -> bool + 'static,
@@ -156,9 +156,9 @@ impl Prop {
 #[cfg(test)]
 mod tests {
   use log::{debug, error, info, log_enabled, Level};
-  use std::ops::RangeInclusive;
+  
 
-  use itertools::Itertools;
+  
 
   use crate::gen::Gens;
   use crate::prop;

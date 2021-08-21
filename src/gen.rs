@@ -220,14 +220,14 @@ impl<A: 'static> Gen<A> {
     Gen { sample: b }
   }
 
-  pub fn fmap<B, F>(self, mut f: F) -> Gen<B>
+  pub fn fmap<B, F>(self, f: F) -> Gen<B>
   where
     F: FnMut(A) -> B + 'static,
     B: Clone + 'static, {
     Self::new(self.sample.fmap(f))
   }
 
-  pub fn fmap2<B, C, F>(self, g: Gen<B>, mut f: F) -> Gen<C>
+  pub fn fmap2<B, C, F>(self, g: Gen<B>, f: F) -> Gen<C>
   where
     F: FnMut(A, B) -> C + 'static,
     A: Clone,
