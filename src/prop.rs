@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Display, Debug};
 
 use anyhow::*;
 use itertools::Unfold;
@@ -53,7 +53,7 @@ pub fn for_all<A, GF, F>(g: GF, mut f: F) -> Prop
 where
   GF: FnMut() -> Gen<A> + 'static,
   F: FnMut(A) -> bool + 'static,
-  A: Clone + Display + 'static, {
+  A: Clone + Debug + 'static, {
   Prop {
     run_f: Box::new(move |_, n, rng| {
       let nl = itertools::iterate(1, |&i| i + 1).into_iter();
@@ -65,7 +65,7 @@ where
             PropResult::Passed
           } else {
             PropResult::Falsified {
-              failure: a.to_string(),
+              failure: format!("{:?}",a),
               successes: i,
             }
           }
