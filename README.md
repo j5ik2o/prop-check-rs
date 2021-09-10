@@ -31,6 +31,8 @@ prop-check-rs = "<<version>>"
   }
 ```
 
+for example, https://github.com/j5ik2o/uri-rs/blob/main/src/parser/parsers/uri_parsers.rs
+
 TODO
 
 ## License
