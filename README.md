@@ -19,6 +19,18 @@ prop-check-rs = "<<version>>"
 
 ## Usage
 
+```rust
+  #[test]
+  fn test_choose_char() -> Result<(), Error> {
+    let gf = || Gens::one_of_vec(vec!['a', 'b', 'c', 'x', 'y', 'z']);
+    let prop = prop::for_all(gf, move |a| {
+      info!("prop1:a = {}", a);
+      a == a
+    });
+    prop::test_with_prop(prop, 1, 100, RNG::new())
+  }
+```
+
 TODO
 
 ## License
