@@ -19,7 +19,17 @@ Add this to your `Cargo.toml`:
 
 ## Usage
 
-
+```rust
+  #[test]
+  fn test_choose_char() -> Result<(), Error> {
+    let gf = || Gens::one_of_vec(vec!['a', 'b', 'c', 'x', 'y', 'z']);
+    let prop = prop::for_all(gf, move |a| {
+      info!("prop1:a = {}", a);
+      a == a
+    });
+    prop::test_with_prop(prop, 1, 100, RNG::new())
+  }
+```
 
 {{readme}}
 
