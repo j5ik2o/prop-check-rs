@@ -10,12 +10,11 @@ use bigdecimal::Num;
 pub struct Gens;
 
 impl Gens {
-  pub fn list_of_n<B, GF>(n: usize, mut g: GF) -> Gen<Vec<B>>
+  pub fn list_of_n<B>(n: usize, mut g: Gen<B>) -> Gen<Vec<B>>
   where
-    GF: FnMut() -> Gen<B>,
     B: Clone + 'static, {
     let mut v: Vec<State<RNG, B>> = Vec::with_capacity(n);
-    v.resize_with(n, move || g().sample);
+    v.resize_with(n, move || g.clone().sample);
     Gen {
       sample: State::sequence(v),
     }
