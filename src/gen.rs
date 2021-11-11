@@ -74,7 +74,7 @@ impl Gens {
   }
 
   pub fn one_char() -> Gen<char> {
-    Self::one_u8().fmap(|v| v as char)
+    Self::one_u8().map(|v| v as char)
   }
 
   pub fn one_bool() -> Gen<bool> {
@@ -96,7 +96,7 @@ impl Gens {
   }
 
   pub fn one_of_vec<T: Choose + Clone + 'static>(values: Vec<T>) -> Gen<T> {
-    Self::choose(0usize, values.len() - 1).fmap(move |idx| values[idx as usize].clone())
+    Self::choose(0usize, values.len() - 1).map(move |idx| values[idx as usize].clone())
   }
 
   pub fn choose<T: Choose>(min: T, max: T) -> Gen<T> {
@@ -112,70 +112,70 @@ impl Gens {
     Gen {
       sample: State::<RNG, i64>::new(move |rng: RNG| rng.next_i64()),
     }
-    .fmap(move |n| min + n % (max - min + 1))
+    .map(move |n| min + n % (max - min + 1))
   }
 
   pub fn choose_u64(min: u64, max: u64) -> Gen<u64> {
     Gen {
       sample: State::<RNG, u64>::new(move |rng: RNG| rng.next_u64()),
     }
-    .fmap(move |n| min + n % (max - min + 1))
+    .map(move |n| min + n % (max - min + 1))
   }
 
   pub fn choose_i32(min: i32, max: i32) -> Gen<i32> {
     Gen {
       sample: State::<RNG, i32>::new(move |rng: RNG| rng.next_i32()),
     }
-    .fmap(move |n| min + n % (max - min + 1))
+    .map(move |n| min + n % (max - min + 1))
   }
 
   pub fn choose_u32(min: u32, max: u32) -> Gen<u32> {
     Gen {
       sample: State::<RNG, u32>::new(move |rng: RNG| rng.next_u32()),
     }
-    .fmap(move |n| min + n % (max - min + 1))
+    .map(move |n| min + n % (max - min + 1))
   }
 
   pub fn choose_i16(min: i16, max: i16) -> Gen<i16> {
     Gen {
       sample: State::<RNG, i16>::new(move |rng: RNG| rng.next_i16()),
     }
-    .fmap(move |n| min + n % (max - min + 1))
+    .map(move |n| min + n % (max - min + 1))
   }
 
   pub fn choose_u16(min: u16, max: u16) -> Gen<u16> {
     Gen {
       sample: State::<RNG, u16>::new(move |rng: RNG| rng.next_u16()),
     }
-    .fmap(move |n| min + n % (max - min + 1))
+    .map(move |n| min + n % (max - min + 1))
   }
 
   pub fn choose_i8(min: i8, max: i8) -> Gen<i8> {
     Gen {
       sample: State::<RNG, i8>::new(move |rng: RNG| rng.next_i8()),
     }
-    .fmap(move |n| min + n % (max - min + 1))
+    .map(move |n| min + n % (max - min + 1))
   }
 
   pub fn choose_u8(min: u8, max: u8) -> Gen<u8> {
     Gen {
       sample: State::<RNG, u8>::new(move |rng: RNG| rng.next_u8()),
     }
-    .fmap(move |n| min + n % (max - min + 1))
+    .map(move |n| min + n % (max - min + 1))
   }
 
   pub fn choose_f64(min: f64, max: f64) -> Gen<f64> {
     Gen {
       sample: State::<RNG, f64>::new(move |rng: RNG| rng.next_f64()),
     }
-    .fmap(move |d| min + d * (max - min))
+    .map(move |d| min + d * (max - min))
   }
 
   pub fn choose_f32(min: f32, max: f32) -> Gen<f32> {
     Gen {
       sample: State::<RNG, f32>::new(move |rng: RNG| rng.next_f32()),
     }
-    .fmap(move |d| min + d * (max - min))
+    .map(move |d| min + d * (max - min))
   }
 
   pub fn even<T: Choose + Num + Copy + 'static>(start: T, stop_exclusive: T) -> Gen<T> {
@@ -188,7 +188,7 @@ impl Gens {
         stop_exclusive
       },
     )
-    .fmap(move |n| if n % two == T::zero() { n + T::one() } else { n })
+    .map(move |n| if n % two == T::zero() { n + T::one() } else { n })
   }
 
   pub fn odd<T: Choose + Num + Copy + 'static>(start: T, stop_exclusive: T) -> Gen<T> {
@@ -201,7 +201,7 @@ impl Gens {
         stop_exclusive
       },
     )
-    .fmap(move |n| if n % two != T::zero() { n + T::one() } else { n })
+    .map(move |n| if n % two != T::zero() { n + T::one() } else { n })
   }
 }
 
@@ -209,11 +209,19 @@ pub struct Gen<A> {
   pub sample: State<RNG, A>,
 }
 
-impl<A: 'static> Gen<A> {
+impl<A: Clone + 'static> Clone for Gen<A> {
+  fn clone(&self) -> Self {
+    Self {
+      sample: self.sample.clone(),
+    }
+  }
+}
+
+impl<A: Clone + 'static> Gen<A> {
   pub fn unit<B, F>(mut f: F) -> Gen<B>
   where
     F: FnMut() -> B,
-    B: 'static, {
+    B: Clone + 'static, {
     Gen::<B>::new(State::unit(f()))
   }
 
@@ -221,26 +229,26 @@ impl<A: 'static> Gen<A> {
     Gen { sample: b }
   }
 
-  pub fn fmap<B, F>(self, f: F) -> Gen<B>
+  pub fn map<B, F>(self, f: F) -> Gen<B>
   where
-    F: FnMut(A) -> B + 'static,
+    F: Fn(A) -> B + 'static,
     B: Clone + 'static, {
-    Self::new(self.sample.fmap(f))
+    Self::new(self.sample.map(f))
   }
 
-  pub fn fmap2<B, C, F>(self, g: Gen<B>, f: F) -> Gen<C>
+  pub fn and_then<B, C, F>(self, g: Gen<B>, f: F) -> Gen<C>
   where
-    F: FnMut(A, B) -> C + 'static,
+    F: Fn(A, B) -> C + 'static,
     A: Clone,
     B: Clone + 'static,
     C: Clone + 'static, {
-    Self::new(self.sample.fmap2(g.sample, f))
+    Self::new(self.sample.and_then(g.sample).map(move |(a, b)| f(a, b)))
   }
 
-  pub fn bind<B, F>(self, mut f: F) -> Gen<B>
+  pub fn flat_map<B, F>(self, mut f: F) -> Gen<B>
   where
-    F: FnMut(A) -> Gen<B> + 'static,
+    F: Fn(A) -> Gen<B> + 'static,
     B: Clone + 'static, {
-    Self::new(self.sample.bind(move |a| f(a).sample))
+    Self::new(self.sample.flat_map(move |a| f(a).sample))
   }
 }

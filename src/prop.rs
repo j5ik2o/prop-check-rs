@@ -1,4 +1,4 @@
-use std::fmt::{Display, Debug};
+use std::fmt::{Debug, Display};
 
 use anyhow::*;
 use itertools::Unfold;
@@ -35,29 +35,27 @@ impl IsFalsified for PropResult {
   }
 }
 
-pub fn random_stream<A, GF>(mut g: GF, rng: RNG) -> Unfold<RNG, Box<dyn FnMut(&mut RNG) -> Option<A>>>
+pub fn random_stream<A>(mut g: Gen<A>, rng: RNG) -> Unfold<RNG, Box<dyn FnMut(&mut RNG) -> Option<A>>>
 where
-  GF: FnMut() -> Gen<A> + 'static,
   A: Clone + 'static, {
   itertools::unfold(
     rng,
     Box::new(move |rng| {
-      let (a, s) = g().sample.run(rng.clone());
+      let (a, s) = g.clone().sample.run(rng.clone());
       *rng = s;
       Some(a)
     }),
   )
 }
 
-pub fn for_all<A, GF, F>(g: GF, mut f: F) -> Prop
+pub fn for_all<A, F>(g: Gen<A>, mut f: F) -> Prop
 where
-  GF: FnMut() -> Gen<A> + 'static,
   F: FnMut(A) -> bool + 'static,
   A: Clone + Debug + 'static, {
   Prop {
     run_f: Box::new(move |_, n, rng| {
       let nl = itertools::iterate(1, |&i| i + 1).into_iter();
-      random_stream(g, rng)
+      random_stream(g.clone(), rng)
         .zip(nl)
         .take(n as usize)
         .map(|(a, i): (A, u32)| {
@@ -65,7 +63,7 @@ where
             PropResult::Passed
           } else {
             PropResult::Falsified {
-              failure: format!("{:?}",a),
+              failure: format!("{:?}", a),
               successes: i,
             }
           }
@@ -156,9 +154,6 @@ impl Prop {
 #[cfg(test)]
 mod tests {
   use log::{debug, error, info, log_enabled, Level};
-  
-
-  
 
   use crate::gen::Gens;
   use crate::prop;
@@ -176,8 +171,8 @@ mod tests {
   fn choose() -> Result<(), Error> {
     init();
     let mut counter = 0;
-    let gf = || Gens::one_of_vec(vec!['a', 'b', 'c', 'x', 'y', 'z']);
-    let prop = prop::for_all(gf, move |a| {
+    let g = Gens::one_of_vec(vec!['a', 'b', 'c', 'x', 'y', 'z']);
+    let prop = prop::for_all(g, move |a| {
       counter += 1;
       info!("prop1:a = {}", a);
       a == a

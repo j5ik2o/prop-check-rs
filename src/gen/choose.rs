@@ -8,7 +8,7 @@ where
 
 impl Choose for usize {
   fn choose(min: Self, max: Self) -> Gen<Self> {
-    Gens::choose_u64(min as u64, max as u64).fmap(|v| v as usize)
+    Gens::choose_u64(min as u64, max as u64).map(|v| v as usize)
   }
 }
 
