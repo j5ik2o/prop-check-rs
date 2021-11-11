@@ -25,7 +25,7 @@ impl Machine {
       .collect::<Vec<_>>();
 
     let result = State::sequence(xs);
-    result.bind(|_| State::<Machine, Machine>::get().fmap(|s: Machine| (s.coins, s.candies)))
+    result.flat_map(|_| State::<Machine, Machine>::get().map(|s: Machine| (s.coins, s.candies)))
   }
 
   fn update() -> Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>> {
