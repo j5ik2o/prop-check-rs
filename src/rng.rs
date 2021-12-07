@@ -168,13 +168,16 @@ impl RNG {
     (acc, current_rng)
   }
 
-  pub fn unit<A: Clone + 'static>(a: A) -> BoxRand<A> {
+  pub fn unit<A>(a: A) -> BoxRand<A>
+  where
+    A: Clone + 'static, {
     Box::new(move |rng: RNG| (a.clone(), rng))
   }
 
-  pub fn sequence<A: Clone + 'static, F: 'static>(fs: Vec<F>) -> BoxRand<Vec<A>>
+  pub fn sequence<A, F>(fs: Vec<F>) -> BoxRand<Vec<A>>
   where
-    F: FnMut(RNG) -> (A, RNG), {
+    A: Clone + 'static,
+    F: FnMut(RNG) -> (A, RNG) + 'static, {
     let unit = Self::unit(Vec::<A>::new());
     let result = fs.into_iter().fold(unit, |acc, e| {
       Self::map2(acc, e, |mut a, b| {
@@ -193,21 +196,21 @@ impl RNG {
     Box::new(move |rng| rng.next_f32())
   }
 
-  pub fn map<A, B, F1: 'static, F2: 'static>(mut s: F1, mut f: F2) -> BoxRand<B>
+  pub fn map<A, B, F1, F2>(mut s: F1, mut f: F2) -> BoxRand<B>
   where
-    F1: FnMut(RNG) -> (A, RNG),
-    F2: FnMut(A) -> B, {
+    F1: FnMut(RNG) -> (A, RNG) + 'static,
+    F2: FnMut(A) -> B + 'static, {
     Box::new(move |rng| {
       let (a, rng2) = s(rng);
       (f(a), rng2)
     })
   }
 
-  pub fn map2<F1: 'static, F2: 'static, F3: 'static, A, B, C>(mut ra: F1, mut rb: F2, mut f: F3) -> BoxRand<C>
+  pub fn map2<F1, F2, F3, A, B, C>(mut ra: F1, mut rb: F2, mut f: F3) -> BoxRand<C>
   where
-    F1: FnMut(RNG) -> (A, RNG),
-    F2: FnMut(RNG) -> (B, RNG),
-    F3: FnMut(A, B) -> C, {
+    F1: FnMut(RNG) -> (A, RNG) + 'static,
+    F2: FnMut(RNG) -> (B, RNG) + 'static,
+    F3: FnMut(A, B) -> C + 'static, {
     Box::new(move |rng| {
       let (a, r1) = ra(rng);
       let (b, r2) = rb(r1);
@@ -215,10 +218,10 @@ impl RNG {
     })
   }
 
-  pub fn both<F1: 'static, F2: 'static, A, B>(ra: F1, rb: F2) -> BoxRand<(A, B)>
+  pub fn both<F1, F2, A, B>(ra: F1, rb: F2) -> BoxRand<(A, B)>
   where
-    F1: FnMut(RNG) -> (A, RNG),
-    F2: FnMut(RNG) -> (B, RNG), {
+    F1: FnMut(RNG) -> (A, RNG) + 'static,
+    F2: FnMut(RNG) -> (B, RNG) + 'static, {
     Self::map2(ra, rb, |a, b| (a, b))
   }
 
@@ -230,11 +233,11 @@ impl RNG {
     Self::both(Self::double_value(), Self::int_value())
   }
 
-  pub fn flat_map<A, B, F: 'static, GF: 'static, BF>(mut f: F, mut g: GF) -> BoxRand<B>
+  pub fn flat_map<A, B, F, GF, BF>(mut f: F, mut g: GF) -> BoxRand<B>
   where
-    F: FnMut(RNG) -> (A, RNG),
-    BF: FnMut(RNG) -> (B, RNG),
-    GF: FnMut(A) -> BF, {
+    F: FnMut(RNG) -> (A, RNG) + 'static,
+    BF: FnMut(RNG) -> (B, RNG) + 'static,
+    GF: FnMut(A) -> BF + 'static, {
     Box::new(move |rng| {
       let (a, r1) = f(rng);
       (g(a))(r1)

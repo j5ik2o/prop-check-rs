@@ -4,7 +4,11 @@ pub struct State<S, A> {
   pub(crate) run_f: Rc<dyn Fn(S) -> (A, S)>,
 }
 
-impl<S: 'static, A: Clone + 'static> Clone for State<S, A> {
+impl<S, A> Clone for State<S, A>
+where
+  S: 'static,
+  A: Clone + 'static,
+{
   fn clone(&self) -> Self {
     Self {
       run_f: self.run_f.clone(),
@@ -12,9 +16,11 @@ impl<S: 'static, A: Clone + 'static> Clone for State<S, A> {
   }
 }
 
-
-
-impl<S: 'static, A: Clone + 'static> State<S, A> {
+impl<S, A> State<S, A>
+where
+  S: 'static,
+  A: Clone + 'static,
+{
   pub fn unit(a: A) -> State<S, A> {
     Self::new(move |s| (a.clone(), s))
   }
@@ -26,8 +32,8 @@ impl<S: 'static, A: Clone + 'static> State<S, A> {
   }
 
   pub fn pure<B>(b: B) -> State<S, B>
-    where
-        B: Clone + 'static, {
+  where
+    B: Clone + 'static, {
     Self::new(move |s| (b.clone(), s))
   }
 

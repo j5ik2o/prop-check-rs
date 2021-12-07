@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::fmt::{Debug, Display};
+use std::rc::Rc;
 
 use anyhow::*;
 use itertools::Unfold;
@@ -53,7 +55,7 @@ where
   F: FnMut(A) -> bool + 'static,
   A: Clone + Debug + 'static, {
   Prop {
-    run_f: Box::new(move |_, n, rng| {
+    run_f: Rc::new(RefCell::new(move |_, n, rng| {
       let nl = itertools::iterate(1, |&i| i + 1).into_iter();
       random_stream(g.clone(), rng)
         .zip(nl)
@@ -70,7 +72,7 @@ where
         })
         .find(move |e| e.is_falsified())
         .unwrap_or(PropResult::Passed)
-    }),
+    })),
   }
 }
 
@@ -107,17 +109,26 @@ pub fn test_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RN
 }
 
 pub struct Prop {
-  run_f: Box<dyn FnOnce(MaxSize, TestCases, RNG) -> PropResult>,
+  run_f: Rc<RefCell<dyn FnMut(MaxSize, TestCases, RNG) -> PropResult>>,
+}
+
+impl Clone for Prop {
+  fn clone(&self) -> Self {
+    Self {
+      run_f: self.run_f.clone(),
+    }
+  }
 }
 
 impl Prop {
-  pub fn run(self, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> PropResult {
-    (self.run_f)(max_size, test_cases, rng)
+  pub fn run(&self, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> PropResult {
+    let mut f = self.run_f.borrow_mut();
+    f(max_size, test_cases, rng)
   }
 
   pub fn tag(self, msg: String) -> Prop {
     Prop {
-      run_f: Box::new(move |max, n, rng| match self.run(max, n, rng) {
+      run_f: Rc::new(RefCell::new(move |max, n, rng| match self.run(max, n, rng) {
         PropResult::Falsified {
           failure: e,
           successes: c,
@@ -126,27 +137,29 @@ impl Prop {
           successes: c,
         },
         x => x,
-      }),
+      })),
     }
   }
 
   pub fn and(self, p: Self) -> Prop {
     Prop {
-      run_f: Box::new(
-        move |max: MaxSize, n: TestCases, rng: RNG| match self.run(max, n, rng.clone()) {
+      run_f: Rc::new(RefCell::new(move |max: MaxSize, n: TestCases, rng: RNG| {
+        match self.run(max, n, rng.clone()) {
           PropResult::Passed | PropResult::Proved => p.run(max, n, rng),
           x => x,
-        },
-      ),
+        }
+      })),
     }
   }
 
   pub fn or(self, p: Self) -> Prop {
     Prop {
-      run_f: Box::new(move |max, n, rng| match self.run(max, n, rng.clone()) {
-        PropResult::Falsified { failure: msg, .. } => p.tag(msg).run(max, n, rng),
-        x => x,
-      }),
+      run_f: Rc::new(RefCell::new(move |max, n, rng: RNG| {
+        match self.run(max, n, rng.clone()) {
+          PropResult::Falsified { failure: msg, .. } => p.clone().tag(msg).run(max, n, rng),
+          x => x,
+        }
+      })),
     }
   }
 }
