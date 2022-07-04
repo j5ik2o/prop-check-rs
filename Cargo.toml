@@ -15,7 +15,7 @@ github = { repository = "j5ik2o/prop-check-rs", workflow = "Rust" }
 [dependencies]
 log = "0.4.17"
 rand = { version = "0.8.5" }
-once_cell = "1.12.0"
+once_cell = "1.12.1"
 bigdecimal = "0.3.0"
 iso-4217 = "0.1"
 num-bigint = "0.4"
