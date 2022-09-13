@@ -20,7 +20,7 @@ bigdecimal = "0.3.0"
 iso-4217 = "0.1"
 num-bigint = "0.4"
 rust-fp-categories = "0.0.5"
-itertools = "0.10.3"
+itertools = "0.10.4"
 anyhow = "1.0.64"
 
 [dev-dependencies]
