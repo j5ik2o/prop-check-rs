@@ -300,7 +300,7 @@ mod tests {
   use crate::prop;
   use crate::rng::RNG;
   use anyhow::Result;
-  
+
   use std::cell::RefCell;
   use std::collections::HashMap;
   use std::env;
