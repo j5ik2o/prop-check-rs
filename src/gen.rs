@@ -33,7 +33,7 @@ impl Gens {
   pub fn option<B>(g: Gen<B>) -> Gen<Option<B>>
   where
     B: Clone + 'static, {
-    Self::frequency(&[(1, Self::unit_lazy(|| None)), (9, Self::some(g))])
+    Self::frequency([(1, Self::unit_lazy(|| None)), (9, Self::some(g))])
   }
 
   pub fn either<T, E>(gt: Gen<T>, ge: Gen<E>) -> Gen<Result<T, E>>
@@ -43,10 +43,10 @@ impl Gens {
     Self::one_of(vec![gt.map(Ok), ge.map(Err)])
   }
 
-  pub fn frequency<B>(values: &[(u32, Gen<B>)]) -> Gen<B>
+  pub fn frequency<B>(values: impl IntoIterator<Item = (u32, Gen<B>)>) -> Gen<B>
   where
     B: Clone + 'static, {
-    let filtered = values.iter().cloned().filter(|kv| kv.0 > 0).collect::<Vec<_>>();
+    let filtered = values.into_iter().filter(|kv| kv.0 > 0).collect::<Vec<_>>();
     let (tree, total) = filtered
       .into_iter()
       .fold((BTreeMap::new(), 0), |(mut tree, total), (weight, value)| {
@@ -322,8 +322,8 @@ mod tests {
     init();
     let result = Rc::new(RefCell::new(HashMap::new()));
     let cloned_map = result.clone();
-    let v = [(1, Gens::unit("a")), (1, Gens::unit("b")), (8, Gens::unit("c"))];
-    let gen = Gens::frequency(&v);
+    let gens = [(1, Gens::unit("a")), (1, Gens::unit("b")), (8, Gens::unit("c"))];
+    let gen = Gens::frequency(gens);
     let prop = prop::for_all(gen, move |a| {
       let mut map = result.borrow_mut();
       let r = map.entry(a).or_insert_with(|| 0);
@@ -331,7 +331,7 @@ mod tests {
       true
     });
     let r = prop::test_with_prop(prop, 1, 10, new_rng());
-    println!("{:?}", cloned_map);
+    println!("{cloned_map:?}");
     r
   }
 }
