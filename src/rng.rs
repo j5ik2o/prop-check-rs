@@ -133,6 +133,10 @@ impl RNG {
     Self { seed: i64::MAX }
   }
 
+  pub fn new_with_seed(seed: i64) -> Self {
+    Self { seed }
+  }
+
   pub fn with_seed(&mut self, seed: i64) {
     self.seed = seed;
   }
@@ -244,19 +248,19 @@ impl RNG {
     })
   }
 
-  pub fn non_negative_less_than(n: u32) -> BoxRand<u32> {
-    Self::flat_map(
-      |rng| rng.next_u32(),
-      move |i| {
-        let m = i % n;
-        if i + (n - 1) - m >= 0 {
-          Self::unit(m)
-        } else {
-          Self::non_negative_less_than(n)
-        }
-      },
-    )
-  }
+  // pub fn non_negative_less_than(n: u32) -> BoxRand<u32> {
+  //   Self::flat_map(
+  //     |rng| rng.next_u32(),
+  //     move |i| {
+  //       let m = i % n;
+  //       //if i + (n - 1) - m >= 0 {
+  //         Self::unit(m)
+  //       // } else {
+  //       //   Self::non_negative_less_than(n)
+  //       // }
+  //     },
+  //   )
+  // }
 }
 
 #[cfg(test)]

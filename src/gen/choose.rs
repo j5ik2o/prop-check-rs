@@ -6,6 +6,35 @@ where
   fn choose(min: Self, max: Self) -> Gen<Self>;
 }
 
+impl<A> Choose for Option<A>
+where
+  A: Choose + Clone + 'static,
+{
+  fn choose(min: Self, max: Self) -> Gen<Self> {
+    match (min, max) {
+      (Some(mn), Some(mx)) => Gens::choose(mn, mx).map(|n| Some(n)),
+      (none, _) if none.is_none() => Gens::unit(none),
+      (_, none) if none.is_none() => Gens::unit(none),
+      _ => panic!("occurred error"),
+    }
+  }
+}
+
+impl<A, B> Choose for Result<A, B>
+where
+  A: Choose + Clone + 'static,
+  B: Clone + 'static,
+{
+  fn choose(min: Self, max: Self) -> Gen<Self> {
+    match (min, max) {
+      (Ok(mn), Ok(mx)) => Gens::choose(mn, mx).map(|n| Ok(n)),
+      (err, _) if err.is_err() => Gens::unit(err),
+      (_, err) if err.is_err() => Gens::unit(err),
+      _ => panic!("occurred error"),
+    }
+  }
+}
+
 impl Choose for usize {
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_u64(min as u64, max as u64).map(|v| v as usize)

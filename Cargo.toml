@@ -10,7 +10,7 @@ edition = "2018"
 keywords = ["testing", "property-based"]
 
 [badges]
-github = { repository = "j5ik2o/prop-check-rs", workflow = "Rust" }
+github = { repository = "j5ik2o/prop-check-rs", workflow = "ci" }
 
 [dependencies]
 log = "0.4.17"

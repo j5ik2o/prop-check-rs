@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::rc::Rc;
 
 use anyhow::*;
@@ -37,7 +37,7 @@ impl IsFalsified for PropResult {
   }
 }
 
-pub fn random_stream<A>(mut g: Gen<A>, rng: RNG) -> Unfold<RNG, Box<dyn FnMut(&mut RNG) -> Option<A>>>
+pub fn random_stream<A>(g: Gen<A>, rng: RNG) -> Unfold<RNG, Box<dyn FnMut(&mut RNG) -> Option<A>>>
 where
   A: Clone + 'static, {
   itertools::unfold(
@@ -166,10 +166,8 @@ impl Prop {
 
 #[cfg(test)]
 mod tests {
-  use log::{debug, error, info, log_enabled, Level};
 
   use crate::gen::Gens;
-  use crate::prop;
 
   use super::*;
   use anyhow::Result;
@@ -181,15 +179,18 @@ mod tests {
   }
 
   #[test]
-  fn choose() -> Result<(), Error> {
+  fn test_one_of() -> Result<()> {
     init();
-    let mut counter = 0;
-    let g = Gens::one_of_vec(vec!['a', 'b', 'c', 'x', 'y', 'z']);
-    let prop = prop::for_all(g, move |a| {
-      counter += 1;
-      info!("prop1:a = {}", a);
+    let g = Gens::one_of(
+      vec!['a', 'b', 'c', 'x', 'y', 'z']
+        .into_iter()
+        .map(Gens::unit)
+        .collect::<Vec<_>>(),
+    );
+    let prop = for_all(g, move |a| {
+      log::info!("prop1:a = {}", a);
       a == a
     });
-    prop::test_with_prop(prop, 1, 100, RNG::new())
+    test_with_prop(prop, 1, 100, RNG::new())
   }
 }
