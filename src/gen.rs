@@ -12,15 +12,15 @@ pub struct Gens;
 
 impl Gens {
   pub fn unit<B>(value: B) -> Gen<B>
-    where
-        B: Clone + 'static, {
+  where
+    B: Clone + 'static, {
     Gen::<B>::new(State::unit(value))
   }
 
   pub fn unit_lazy<B, F>(mut f: F) -> Gen<B>
-    where
-        F: FnMut() -> B,
-        B: Clone + 'static, {
+  where
+    F: FnMut() -> B,
+    B: Clone + 'static, {
     Gen::<B>::new(State::unit(f()))
   }
 
@@ -36,8 +36,10 @@ impl Gens {
     Self::frequency(&[(1, Self::unit_lazy(|| None)), (9, Self::some(g))])
   }
 
-  pub fn either<T, E>(gt: Gen<T>, ge: Gen<E>) -> Gen<Result<T, E>>  where
-      T: Choose + Clone + 'static, E: Clone + 'static {
+  pub fn either<T, E>(gt: Gen<T>, ge: Gen<E>) -> Gen<Result<T, E>>
+  where
+    T: Choose + Clone + 'static,
+    E: Clone + 'static, {
     Self::one_of(vec![gt.map(Ok), ge.map(Err)])
   }
 
@@ -139,7 +141,7 @@ impl Gens {
     }
   }
 
-  pub fn one_of<T: Choose + Clone + 'static>(values: impl IntoIterator<Item=Gen<T>>) -> Gen<T> {
+  pub fn one_of<T: Choose + Clone + 'static>(values: impl IntoIterator<Item = Gen<T>>) -> Gen<T> {
     let mut vec = vec![];
     vec.extend(values.into_iter());
     Self::choose(0usize, vec.len() - 1).flat_map(move |idx| vec[idx as usize].clone())
@@ -294,13 +296,13 @@ impl<A: Clone + 'static> Gen<A> {
 
 #[cfg(test)]
 mod tests {
-  use std::cell::RefCell;
-  use std::collections::HashMap;
-  use crate::gen::{Gens};
+  use crate::gen::Gens;
+  use crate::prop;
   use crate::rng::RNG;
-  use crate::{prop};
   use anyhow::Result;
   use log::info;
+  use std::cell::RefCell;
+  use std::collections::HashMap;
   use std::env;
   use std::rc::Rc;
   use std::time::{SystemTime, UNIX_EPOCH};

@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::fmt::{Debug};
+use std::fmt::Debug;
 use std::rc::Rc;
 
 use anyhow::*;
@@ -181,7 +181,12 @@ mod tests {
   #[test]
   fn test_one_of() -> Result<()> {
     init();
-    let g = Gens::one_of(vec!['a', 'b', 'c', 'x', 'y', 'z'].into_iter().map(Gens::unit).collect::<Vec<_>>());
+    let g = Gens::one_of(
+      vec!['a', 'b', 'c', 'x', 'y', 'z']
+        .into_iter()
+        .map(Gens::unit)
+        .collect::<Vec<_>>(),
+    );
     let prop = for_all(g, move |a| {
       log::info!("prop1:a = {}", a);
       a == a
