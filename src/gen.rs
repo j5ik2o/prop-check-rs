@@ -17,30 +17,30 @@ impl Gens {
     Gen::<B>::new(State::unit(value))
   }
 
-  pub fn unit_lazy<B, F>(mut f: F) -> Gen<B>
+  pub fn unit_lazy<B, F>(f: F) -> Gen<B>
   where
-    F: FnMut() -> B,
+    F: Fn() -> B + 'static,
     B: Clone + 'static, {
-    Gen::<B>::new(State::unit(f()))
+    Self::unit(()).map(move |_| f())
   }
 
   pub fn some<B>(g: Gen<B>) -> Gen<Option<B>>
   where
     B: Clone + 'static, {
-    g.map(|v| Some(v))
+    g.map(Some)
   }
 
   pub fn option<B>(g: Gen<B>) -> Gen<Option<B>>
   where
     B: Clone + 'static, {
-    Self::frequency([(1, Self::unit_lazy(|| None)), (9, Self::some(g))])
+    Self::frequency([(1, Self::unit(None)), (9, Self::some(g))])
   }
 
   pub fn either<T, E>(gt: Gen<T>, ge: Gen<E>) -> Gen<Result<T, E>>
   where
     T: Choose + Clone + 'static,
     E: Clone + 'static, {
-    Self::one_of(vec![gt.map(Ok), ge.map(Err)])
+    Self::one_of([gt.map(Ok), ge.map(Err)])
   }
 
   pub fn frequency<B>(values: impl IntoIterator<Item = (u32, Gen<B>)>) -> Gen<B>
