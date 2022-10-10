@@ -6,11 +6,56 @@ use crate::gen::one::One;
 use crate::rng::{NextRandValue, RNG};
 use crate::state::State;
 use bigdecimal::Num;
+use std::collections::BTreeMap;
 
 pub struct Gens;
 
 impl Gens {
-  pub fn list_of_n<B>(n: usize, mut g: Gen<B>) -> Gen<Vec<B>>
+  pub fn unit<B>(value: B) -> Gen<B>
+    where
+        B: Clone + 'static, {
+    Gen::<B>::new(State::unit(value))
+  }
+
+  pub fn unit_lazy<B, F>(mut f: F) -> Gen<B>
+    where
+        F: FnMut() -> B,
+        B: Clone + 'static, {
+    Gen::<B>::new(State::unit(f()))
+  }
+
+  pub fn some<B>(g: Gen<B>) -> Gen<Option<B>>
+  where
+    B: Clone + 'static, {
+    g.map(|v| Some(v))
+  }
+
+  pub fn option<B>(g: Gen<B>) -> Gen<Option<B>>
+  where
+    B: Clone + 'static, {
+    Self::frequency(&[(1, Self::unit_lazy(|| None)), (9, Self::some(g))])
+  }
+
+  pub fn either<T, E>(gt: Gen<T>, ge: Gen<E>) -> Gen<Result<T, E>>  where
+      T: Choose + Clone + 'static, E: Clone + 'static {
+    Self::one_of(vec![gt.map(Ok), ge.map(Err)])
+  }
+
+  pub fn frequency<B>(values: &[(u32, Gen<B>)]) -> Gen<B>
+  where
+    B: Clone + 'static, {
+    let filtered = values.iter().cloned().filter(|kv| kv.0 > 0).collect::<Vec<_>>();
+    let (tree, total) = filtered
+      .into_iter()
+      .fold((BTreeMap::new(), 0), |(mut tree, total), (weight, value)| {
+        let t = total + weight;
+        tree.insert(t, value.clone());
+        (tree, t)
+      });
+    Self::choose_u32(1, total).flat_map(move |n| tree.range(n..).into_iter().next().unwrap().1.clone())
+  }
+
+  pub fn list_of_n<B>(n: usize, g: Gen<B>) -> Gen<Vec<B>>
   where
     B: Clone + 'static, {
     let mut v: Vec<State<RNG, B>> = Vec::with_capacity(n);
@@ -94,8 +139,10 @@ impl Gens {
     }
   }
 
-  pub fn one_of_vec<T: Choose + Clone + 'static>(values: Vec<T>) -> Gen<T> {
-    Self::choose(0usize, values.len() - 1).map(move |idx| values[idx as usize].clone())
+  pub fn one_of<T: Choose + Clone + 'static>(values: impl IntoIterator<Item=Gen<T>>) -> Gen<T> {
+    let mut vec = vec![];
+    vec.extend(values.into_iter());
+    Self::choose(0usize, vec.len() - 1).flat_map(move |idx| vec[idx as usize].clone())
   }
 
   pub fn choose<T: Choose>(min: T, max: T) -> Gen<T> {
@@ -103,8 +150,8 @@ impl Gens {
   }
 
   pub fn choose_char(min: char, max: char) -> Gen<char> {
-    let chars = (min..=max).into_iter().collect::<Vec<char>>();
-    Self::one_of_vec(chars)
+    let chars = (min..=max).into_iter().map(|e| Self::unit(e)).collect::<Vec<_>>();
+    Self::one_of(chars)
   }
 
   pub fn choose_i64(min: i64, max: i64) -> Gen<i64> {
@@ -217,13 +264,6 @@ impl<A: Clone + 'static> Clone for Gen<A> {
 }
 
 impl<A: Clone + 'static> Gen<A> {
-  pub fn unit<B, F>(mut f: F) -> Gen<B>
-  where
-    F: FnMut() -> B,
-    B: Clone + 'static, {
-    Gen::<B>::new(State::unit(f()))
-  }
-
   pub fn new<B>(b: State<RNG, B>) -> Gen<B> {
     Gen { sample: b }
   }
@@ -244,10 +284,52 @@ impl<A: Clone + 'static> Gen<A> {
     Self::new(self.sample.and_then(g.sample).map(move |(a, b)| f(a, b)))
   }
 
-  pub fn flat_map<B, F>(self, mut f: F) -> Gen<B>
+  pub fn flat_map<B, F>(self, f: F) -> Gen<B>
   where
     F: Fn(A) -> Gen<B> + 'static,
     B: Clone + 'static, {
     Self::new(self.sample.flat_map(move |a| f(a).sample))
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::cell::RefCell;
+  use std::collections::HashMap;
+  use crate::gen::{Gens};
+  use crate::rng::RNG;
+  use crate::{prop};
+  use anyhow::Result;
+  use log::info;
+  use std::env;
+  use std::rc::Rc;
+  use std::time::{SystemTime, UNIX_EPOCH};
+
+  fn init() {
+    env::set_var("RUST_LOG", "info");
+    let _ = env_logger::builder().is_test(true).try_init();
+  }
+
+  fn new_rng() -> RNG {
+    let s = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    RNG::new_with_seed(s as i64)
+  }
+
+  #[test]
+  fn test_frequency() -> Result<()> {
+    init();
+    let result = Rc::new(RefCell::new(HashMap::new()));
+    let cloned_map = result.clone();
+    let v = [(1, Gens::unit("a")), (1, Gens::unit("b")), (8, Gens::unit("c"))];
+    let gen = Gens::frequency(&v);
+    let prop = prop::for_all(gen, move |a| {
+      let mut map = result.borrow_mut();
+      let r = map.entry(a).or_insert_with(|| 0);
+      *r += 1;
+      true
+    });
+    let r = prop::test_with_prop(prop, 1, 10, new_rng());
+    println!("{:?}", cloned_map);
+    r
   }
 }
