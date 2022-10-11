@@ -87,7 +87,7 @@ impl<T: NextRandValue> RandGen<T> for bool {
   }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RNG {
   seed: i64,
 }
