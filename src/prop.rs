@@ -43,7 +43,7 @@ where
   itertools::unfold(
     rng,
     Box::new(move |rng| {
-      let (a, s) = g.clone().sample.run(rng.clone());
+      let (a, s) = g.clone().run(rng.clone());
       *rng = s;
       Some(a)
     }),

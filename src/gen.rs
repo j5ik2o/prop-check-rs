@@ -254,7 +254,7 @@ impl Gens {
 }
 
 pub struct Gen<A> {
-  pub sample: State<RNG, A>,
+  sample: State<RNG, A>,
 }
 
 impl<A: Clone + 'static> Clone for Gen<A> {
