@@ -2,7 +2,7 @@
 
 A Rust crate for property-based testing.
 
-[![Workflow Status](https://github.com/j5ik2o/prop-check-rs/workflows/Rust/badge.svg)](https://github.com/j5ik2o/prop-check-rs/actions?query=workflow%3A%22ci%22)
+[![Workflow Status](https://github.com/j5ik2o/prop-check-rs/workflows/ci/badge.svg)](https://github.com/j5ik2o/prop-check-rs/actions?query=workflow%3A%22ci%22)
 [![crates.io](https://img.shields.io/crates/v/prop-check-rs.svg)](https://crates.io/crates/prop-check-rs)
 [![docs.rs](https://docs.rs/prop-check-rs/badge.svg)](https://docs.rs/prop-check-rs)
 [![dependency status](https://deps.rs/repo/github/j5ik2o/prop-check-rs/status.svg)](https://deps.rs/repo/github/j5ik2o/prop-check-rs)
