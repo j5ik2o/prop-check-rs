@@ -20,15 +20,16 @@ prop-check-rs = "<<version>>"
 ## Usage
 
 ```rust
-  #[test]
-  fn test_choose_char() -> Result<(), Error> {
-    let g = Gens::one_of(['a', 'b', 'c', 'x', 'y', 'z']);
-    let prop = prop::for_all(g, move |a| {
-      info!("a = {}", a);
-      a == a
-    });
-    prop::test_with_prop(prop, 1, 100, RNG::new())
-  }
+#[test]
+fn test_one_of() -> Result<()> {
+  let gens: Vec<Gen<char>> = vec!['a', 'b', 'c', 'x', 'y', 'z'].into_iter().map(Gens::unit).collect();
+  let gen = Gens::one_of(gens);
+  let prop = for_all(gen, move |value| {
+      log::info!("value = {}", value);
+      true
+  });
+  test_with_prop(prop, 1, 100, new_rng())
+}
 ```
 
 for example, https://github.com/j5ik2o/uri-rs/blob/main/src/parser/parsers/uri_parsers.rs
