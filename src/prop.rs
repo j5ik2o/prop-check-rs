@@ -184,7 +184,6 @@ mod tests {
   }
 
   fn test_one_of() -> Result<()> {
-    init();
     let gens: Vec<Gen<char>> = vec!['a', 'b', 'c', 'x', 'y', 'z'].into_iter().map(Gens::unit).collect();
     let gen = Gens::one_of(gens);
     let prop = for_all(gen, move |a| {
