@@ -45,12 +45,12 @@ jobs:
         VERSION=$(echo '${{ steps.dry_run_tag_version.outputs.new_tag }}' | sed 's/^v//')
         echo "::set-output name=version::$VERSION"
       if: steps.changes.outputs.count > 0
-    - name: Update version
-      uses: ciiiii/toml-editor@1.0.0
+    - uses: baptiste0928/cargo-install@v1
       with:
-        file: "Cargo.toml"
-        key: "package.version"
-        value: ${{ steps.version.outputs.version }}
+        crate: cargo-edit
+    - name: Update version
+      run: |
+        cargo set-version ${{ steps.version.outputs.version }}
       if: steps.changes.outputs.count > 0
     - name: Execute commit & push
       id: git_commit_push
