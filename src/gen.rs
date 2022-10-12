@@ -7,6 +7,7 @@ use crate::rng::{NextRandValue, RNG};
 use crate::state::State;
 use bigdecimal::Num;
 use std::collections::BTreeMap;
+use std::fmt::Debug;
 
 pub struct Gens;
 
@@ -32,7 +33,7 @@ impl Gens {
 
   pub fn option<B>(g: Gen<B>) -> Gen<Option<B>>
   where
-    B: Clone + 'static, {
+    B: Debug + Clone + 'static, {
     Self::frequency([(1, Self::unit(None)), (9, Self::some(g))])
   }
 
@@ -45,7 +46,7 @@ impl Gens {
 
   pub fn frequency<B>(values: impl IntoIterator<Item = (u32, Gen<B>)>) -> Gen<B>
   where
-    B: Clone + 'static, {
+    B: Debug + Clone + 'static, {
     let filtered = values.into_iter().filter(|kv| kv.0 > 0).collect::<Vec<_>>();
     let (tree, total) = filtered
       .into_iter()
@@ -253,6 +254,7 @@ impl Gens {
   }
 }
 
+#[derive(Debug)]
 pub struct Gen<A> {
   sample: State<RNG, A>,
 }
@@ -309,7 +311,6 @@ mod tests {
   use std::collections::HashMap;
   use std::env;
   use std::rc::Rc;
-  use std::time::{SystemTime, UNIX_EPOCH};
 
   pub mod laws {
     use crate::gen::{Gen, Gens};
@@ -345,27 +346,27 @@ mod tests {
   }
 
   fn new_rng() -> RNG {
-    let s = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-    RNG::new_with_seed(s as i64)
+    //    let s = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    RNG::new()
   }
 
   #[test]
   fn test_left_identity_law() -> Result<()> {
-    let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as i64), e));
+    let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
     let laws_prop = laws::left_identity_law(gen);
     prop::test_with_prop(laws_prop, 1, 100, new_rng())
   }
 
   #[test]
   fn test_right_identity_law() -> Result<()> {
-    let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as i64), e));
+    let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
     let laws_prop = laws::right_identity_law(gen);
     prop::test_with_prop(laws_prop, 1, 100, new_rng())
   }
 
   #[test]
   fn test_associativity_law() -> Result<()> {
-    let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as i64), e));
+    let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
     let laws_prop = laws::associativity_law(gen);
     prop::test_with_prop(laws_prop, 1, 100, new_rng())
   }

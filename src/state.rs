@@ -1,7 +1,14 @@
+use std::fmt::{Debug, Formatter};
 use std::rc::Rc;
 
 pub struct State<S, A> {
   pub(crate) run_f: Rc<dyn Fn(S) -> (A, S)>,
+}
+
+impl<S, A> Debug for State<S, A> {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "Fn")
+  }
 }
 
 impl<S, A> Clone for State<S, A>
