@@ -68,6 +68,13 @@ impl Machine {
 #[cfg(test)]
 mod tests {
   use crate::machine::{Input, Machine};
+  use std::env;
+
+  #[ctor::ctor]
+  fn init() {
+    env::set_var("RUST_LOG", "info");
+    let _ = env_logger::builder().is_test(true).try_init();
+  }
 
   #[test]
   fn candy() {

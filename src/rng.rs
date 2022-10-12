@@ -295,13 +295,20 @@ impl RNG {
 #[cfg(test)]
 mod tests {
   use crate::rng::{RandGen, RNG};
+  use std::env;
+
+  #[ctor::ctor]
+  fn init() {
+    env::set_var("RUST_LOG", "info");
+    let _ = env_logger::builder().is_test(true).try_init();
+  }
 
   #[test]
   fn next_int() {
     let rng = RNG::new();
     let (v1, r1) = i32::rnd_gen(rng);
-    println!("{:?}", v1);
+    log::info!("{:?}", v1);
     let (v2, _) = u32::rnd_gen(r1);
-    println!("{:?}", v2);
+    log::info!("{:?}", v2);
   }
 }

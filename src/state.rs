@@ -120,11 +120,23 @@ where
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::rng::RNG;
+  use std::env;
+
+  #[ctor::ctor]
+  fn init() {
+    env::set_var("RUST_LOG", "info");
+    let _ = env_logger::builder().is_test(true).try_init();
+  }
+
+  fn new_rng() -> RNG {
+    RNG::new()
+  }
 
   #[test]
   fn state() {
     let s = State::<u32, u32>::pure(10);
     let r = s.run(10);
-    println!("{:?}", r);
+    log::info!("{:?}", r);
   }
 }

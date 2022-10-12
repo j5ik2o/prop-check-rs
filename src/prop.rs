@@ -173,24 +173,24 @@ mod tests {
   use anyhow::Result;
   use std::env;
 
+  #[ctor::ctor]
   fn init() {
     env::set_var("RUST_LOG", "info");
     let _ = env_logger::builder().is_test(true).try_init();
   }
 
-  #[test]
+  fn new_rng() -> RNG {
+    RNG::new()
+  }
+
   fn test_one_of() -> Result<()> {
     init();
-    let g = Gens::one_of(
-      vec!['a', 'b', 'c', 'x', 'y', 'z']
-        .into_iter()
-        .map(Gens::unit)
-        .collect::<Vec<_>>(),
-    );
-    let prop = for_all(g, move |a| {
+    let gens: Vec<Gen<char>> = vec!['a', 'b', 'c', 'x', 'y', 'z'].into_iter().map(Gens::unit).collect();
+    let gen = Gens::one_of(gens);
+    let prop = for_all(gen, move |a| {
       log::info!("prop1:a = {}", a);
       a == a
     });
-    test_with_prop(prop, 1, 100, RNG::new())
+    test_with_prop(prop, 1, 100, new_rng())
   }
 }

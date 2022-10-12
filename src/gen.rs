@@ -302,9 +302,8 @@ impl<A: Clone + 'static> Gen<A> {
 
 #[cfg(test)]
 mod tests {
-  use crate::gen::Gens;
+  use super::*;
   use crate::prop;
-  use crate::rng::RNG;
   use anyhow::Result;
 
   use std::cell::RefCell;
@@ -312,68 +311,54 @@ mod tests {
   use std::env;
   use std::rc::Rc;
 
-  pub mod laws {
-    use crate::gen::{Gen, Gens};
-    use crate::prop;
-    use crate::prop::Prop;
-    use crate::rng::RNG;
-
-    pub fn left_identity_law(input: Gen<(RNG, i32)>) -> Prop {
-      let f = |x| Gens::unit(x);
-      prop::for_all(input, move |(s, n)| {
-        Gens::unit(n).flat_map(f).run(s.clone()) == f(n).run(s)
-      })
-    }
-
-    pub fn right_identity_law(input: Gen<(RNG, i32)>) -> Prop {
-      prop::for_all(input, move |(s, x)| {
-        Gens::unit(x).flat_map(|y| Gens::unit(y)).run(s.clone()) == Gens::unit(x).run(s)
-      })
-    }
-
-    pub fn associativity_law(input: Gen<(RNG, i32)>) -> Prop {
-      let f = |x| Gens::unit(x * 2);
-      let g = |x| Gens::unit(x + 1);
-      prop::for_all(input, move |(s, x)| {
-        Gens::unit(x).flat_map(f).flat_map(g).run(s.clone()) == f(x).flat_map(g).run(s)
-      })
-    }
-  }
-
+  #[ctor::ctor]
   fn init() {
     env::set_var("RUST_LOG", "info");
     let _ = env_logger::builder().is_test(true).try_init();
   }
 
   fn new_rng() -> RNG {
-    //    let s = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     RNG::new()
   }
 
-  #[test]
-  fn test_left_identity_law() -> Result<()> {
-    let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
-    let laws_prop = laws::left_identity_law(gen);
-    prop::test_with_prop(laws_prop, 1, 100, new_rng())
-  }
+  pub mod laws {
+    use super::*;
 
-  #[test]
-  fn test_right_identity_law() -> Result<()> {
-    let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
-    let laws_prop = laws::right_identity_law(gen);
-    prop::test_with_prop(laws_prop, 1, 100, new_rng())
-  }
+    #[test]
+    fn test_left_identity_law() -> Result<()> {
+      let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
+      let f = |x| Gens::unit(x);
+      let laws_prop = prop::for_all(gen, move |(s, n)| {
+        Gens::unit(n).flat_map(f).run(s.clone()) == f(n).run(s)
+      });
+      prop::test_with_prop(laws_prop, 1, 100, new_rng())
+    }
 
-  #[test]
-  fn test_associativity_law() -> Result<()> {
-    let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
-    let laws_prop = laws::associativity_law(gen);
-    prop::test_with_prop(laws_prop, 1, 100, new_rng())
+    #[test]
+    fn test_right_identity_law() -> Result<()> {
+      let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
+
+      let laws_prop = prop::for_all(gen, move |(s, x)| {
+        Gens::unit(x).flat_map(|y| Gens::unit(y)).run(s.clone()) == Gens::unit(x).run(s)
+      });
+
+      prop::test_with_prop(laws_prop, 1, 100, new_rng())
+    }
+
+    #[test]
+    fn test_associativity_law() -> Result<()> {
+      let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
+      let f = |x| Gens::unit(x * 2);
+      let g = |x| Gens::unit(x + 1);
+      let laws_prop = prop::for_all(gen, move |(s, x)| {
+        Gens::unit(x).flat_map(f).flat_map(g).run(s.clone()) == f(x).flat_map(g).run(s)
+      });
+      prop::test_with_prop(laws_prop, 1, 100, new_rng())
+    }
   }
 
   #[test]
   fn test_frequency() -> Result<()> {
-    init();
     let result = Rc::new(RefCell::new(HashMap::new()));
     let cloned_map = result.clone();
     let gens = [(1, Gens::unit("a")), (1, Gens::unit("b")), (8, Gens::unit("c"))];
