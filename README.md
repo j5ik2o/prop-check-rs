@@ -22,9 +22,9 @@ prop-check-rs = "<<version>>"
 ```rust
   #[test]
   fn test_choose_char() -> Result<(), Error> {
-    let g = Gens::one_of(vec!['a', 'b', 'c', 'x', 'y', 'z']);
+    let g = Gens::one_of(['a', 'b', 'c', 'x', 'y', 'z']);
     let prop = prop::for_all(g, move |a| {
-      info!("prop1:a = {}", a);
+      info!("a = {}", a);
       a == a
     });
     prop::test_with_prop(prop, 1, 100, RNG::new())
