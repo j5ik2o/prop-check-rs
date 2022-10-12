@@ -1,3 +1,5 @@
+use rand::prelude::*;
+
 pub trait NextRandValue
 where
   Self: Sized, {
@@ -89,7 +91,7 @@ impl<T: NextRandValue> RandGen<T> for bool {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RNG {
-  seed: i64,
+  rng: StdRng,
 }
 
 type DynRand<A> = dyn FnMut(RNG) -> (A, RNG);
@@ -103,42 +105,83 @@ impl Default for RNG {
 
 impl NextRandValue for RNG {
   fn next_i64(&self) -> (i64, Self) {
-    let new_seed = self.seed.wrapping_mul(0x5DEECE66D) & 0xFFFFFFFFFFFF;
-    let next_rng = RNG { seed: new_seed };
-    let n = (new_seed >> 16) as i64;
-    (n, next_rng)
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
+  }
+
+  fn next_u64(&self) -> (u64, Self) {
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
   }
 
   fn next_i32(&self) -> (i32, Self) {
-    let (n, next_rng) = self.next_i64();
-    let n = n as i32;
-    (n, next_rng)
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
+  }
+
+  fn next_u32(&self) -> (u32, Self) {
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
   }
 
   fn next_i16(&self) -> (i16, Self) {
-    let (n, next_rng) = self.next_i64();
-    let n = n as i16;
-    (n, next_rng)
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
+  }
+
+  fn next_u16(&self) -> (u16, Self) {
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
   }
 
   fn next_i8(&self) -> (i8, Self) {
-    let (n, next_rng) = self.next_i64();
-    let n = n as i8;
-    (n, next_rng)
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
+  }
+
+  fn next_u8(&self) -> (u8, Self) {
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
+  }
+
+  fn next_f64(&self) -> (f64, Self) {
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
+  }
+
+  fn next_f32(&self) -> (f32, Self) {
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
+  }
+
+  fn next_bool(&self) -> (bool, Self) {
+    let mut mr = self.rng.clone();
+    let n = mr.gen();
+    (n, Self { rng: mr })
   }
 }
 
 impl RNG {
   pub fn new() -> Self {
-    Self { seed: i64::MAX }
+    Self {
+      rng: StdRng::from_rng(thread_rng()).unwrap(),
+    }
   }
 
-  pub fn new_with_seed(seed: i64) -> Self {
-    Self { seed }
-  }
-
-  pub fn with_seed(&mut self, seed: i64) {
-    self.seed = seed;
+  pub fn new_with_seed(seed: u64) -> Self {
+    Self {
+      rng: StdRng::seed_from_u64(seed),
+    }
   }
 
   pub fn i32_f32(&self) -> ((i32, f32), Self) {
@@ -247,20 +290,6 @@ impl RNG {
       (g(a))(r1)
     })
   }
-
-  // pub fn non_negative_less_than(n: u32) -> BoxRand<u32> {
-  //   Self::flat_map(
-  //     |rng| rng.next_u32(),
-  //     move |i| {
-  //       let m = i % n;
-  //       //if i + (n - 1) - m >= 0 {
-  //         Self::unit(m)
-  //       // } else {
-  //       //   Self::non_negative_less_than(n)
-  //       // }
-  //     },
-  //   )
-  // }
 }
 
 #[cfg(test)]
