@@ -344,7 +344,7 @@ impl<A: Clone + 'static> SGen<A> {
   pub fn run(&self, i: Option<u32>) -> Gen<A> {
     match self {
       SGen::Sized(f) => {
-        let mut mf = f.borrow_mut();
+        let mf = f.borrow_mut();
         mf(i.unwrap())
       }
       SGen::Unsized(g) => g.clone(),
