@@ -1,12 +1,11 @@
-use std::cell::RefCell;
-use std::fmt::Debug;
-use std::rc::Rc;
+use crate::gen::{Gen, SGen};
+use crate::rng::RNG;
 
 use anyhow::*;
 use itertools::Unfold;
-
-use crate::gen::Gen;
-use crate::rng::RNG;
+use std::cell::RefCell;
+use std::fmt::Debug;
+use std::rc::Rc;
 
 pub type MaxSize = u32;
 pub type TestCases = u32;
@@ -37,7 +36,7 @@ impl IsFalsified for PropResult {
   }
 }
 
-pub fn random_stream<A>(g: Gen<A>, rng: RNG) -> Unfold<RNG, Box<dyn FnMut(&mut RNG) -> Option<A>>>
+fn random_stream<A>(g: Gen<A>, rng: RNG) -> Unfold<RNG, Box<dyn FnMut(&mut RNG) -> Option<A>>>
 where
   A: Clone + 'static, {
   itertools::unfold(
@@ -50,7 +49,41 @@ where
   )
 }
 
-pub fn for_all<A, F>(g: Gen<A>, mut f: F) -> Prop
+pub fn for_all_sgen<A, F, FF>(sgen: SGen<A>, mut f: FF) -> Prop
+where
+  F: FnMut(A) -> bool + 'static,
+  FF: FnMut() -> F + 'static,
+  A: Clone + Debug + 'static, {
+  match sgen {
+    SGen::Unsized(g) => for_all_gen(g, f()),
+    s @ SGen::Sized(..) => for_all_gen_for_size(move |i| s.run(Some(i)), f),
+  }
+}
+
+pub fn for_all_gen_for_size<A, GF, F, FF>(gf: GF, mut f: FF) -> Prop
+where
+  GF: Fn(u32) -> Gen<A> + 'static,
+  F: FnMut(A) -> bool + 'static,
+  FF: FnMut() -> F + 'static,
+  A: Clone + Debug + 'static, {
+  Prop {
+    run_f: Rc::new(RefCell::new(move |max, n, rng| {
+      let cases_per_size = n / max;
+      let props = itertools::iterate(0, |i| *i + 1)
+        .map(|i| for_all_gen(gf(i), f()))
+        .take(max as usize)
+        .collect::<Vec<_>>();
+      let p = props
+        .into_iter()
+        .map(|p| Prop::new(move |max, _, rng| p.run(max, cases_per_size, rng)))
+        .reduce(|l, r| l.and(r))
+        .unwrap();
+      p.run(max, n, rng)
+    })),
+  }
+}
+
+pub fn for_all_gen<A, F>(g: Gen<A>, mut f: F) -> Prop
 where
   F: FnMut(A) -> bool + 'static,
   A: Clone + Debug + 'static, {
@@ -121,46 +154,46 @@ impl Clone for Prop {
 }
 
 impl Prop {
+  pub fn new<F>(f: F) -> Prop
+  where
+    F: Fn(MaxSize, TestCases, RNG) -> PropResult + 'static, {
+    Prop {
+      run_f: Rc::new(RefCell::new(f)),
+    }
+  }
+
   pub fn run(&self, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> PropResult {
     let mut f = self.run_f.borrow_mut();
     f(max_size, test_cases, rng)
   }
 
   pub fn tag(self, msg: String) -> Prop {
-    Prop {
-      run_f: Rc::new(RefCell::new(move |max, n, rng| match self.run(max, n, rng) {
-        PropResult::Falsified {
-          failure: e,
-          successes: c,
-        } => PropResult::Falsified {
-          failure: format!("{}\n{}", msg, e),
-          successes: c,
-        },
-        x => x,
-      })),
-    }
+    Prop::new(move |max, n, rng| match self.run(max, n, rng) {
+      PropResult::Falsified {
+        failure: e,
+        successes: c,
+      } => PropResult::Falsified {
+        failure: format!("{}\n{}", msg, e),
+        successes: c,
+      },
+      x => x,
+    })
   }
 
   pub fn and(self, p: Self) -> Prop {
-    Prop {
-      run_f: Rc::new(RefCell::new(move |max: MaxSize, n: TestCases, rng: RNG| {
-        match self.run(max, n, rng.clone()) {
-          PropResult::Passed | PropResult::Proved => p.run(max, n, rng),
-          x => x,
-        }
-      })),
-    }
+    Self::new(
+      move |max: MaxSize, n: TestCases, rng: RNG| match self.run(max, n, rng.clone()) {
+        PropResult::Passed | PropResult::Proved => p.run(max, n, rng),
+        x => x,
+      },
+    )
   }
 
   pub fn or(self, p: Self) -> Prop {
-    Prop {
-      run_f: Rc::new(RefCell::new(move |max, n, rng: RNG| {
-        match self.run(max, n, rng.clone()) {
-          PropResult::Falsified { failure: msg, .. } => p.clone().tag(msg).run(max, n, rng),
-          x => x,
-        }
-      })),
-    }
+    Self::new(move |max, n, rng: RNG| match self.run(max, n, rng.clone()) {
+      PropResult::Falsified { failure: msg, .. } => p.clone().tag(msg).run(max, n, rng),
+      x => x,
+    })
   }
 }
 
@@ -183,13 +216,30 @@ mod tests {
     RNG::new()
   }
 
+  #[test]
   fn test_one_of() -> Result<()> {
-    let gens: Vec<Gen<char>> = vec!['a', 'b', 'c', 'x', 'y', 'z'].into_iter().map(Gens::unit).collect();
-    let gen = Gens::one_of(gens);
-    let prop = for_all(gen, move |a| {
-      log::info!("prop1:a = {}", a);
-      a == a
+    let gen = Gens::one_of_values(['a', 'b', 'c', 'x', 'y', 'z']);
+    let prop = for_all_gen(gen, move |a| {
+      log::info!("value = {}", a);
+      true
     });
     test_with_prop(prop, 1, 100, new_rng())
+  }
+
+  #[test]
+  fn test_one_of_2() -> Result<()> {
+    let mut counter = 0;
+    let gen = Gens::one_of_values(['a', 'b', 'c', 'x', 'y', 'z']);
+    let prop = for_all_gen_for_size(
+      move |size| Gens::list_of_n(size as usize, gen.clone()),
+      move || {
+        move |a| {
+          counter += 1;
+          log::info!("value = {},{:?}", counter, a);
+          true
+        }
+      },
+    );
+    test_with_prop(prop, 10, 100, new_rng())
   }
 }
