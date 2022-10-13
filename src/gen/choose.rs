@@ -12,9 +12,9 @@ where
 {
   fn choose(min: Self, max: Self) -> Gen<Self> {
     match (min, max) {
-      (Some(mn), Some(mx)) => Gens::choose(mn, mx).map(|n| Some(n)),
-      (none, _) if none.is_none() => Gens::unit(none),
-      (_, none) if none.is_none() => Gens::unit(none),
+      (Some(mn), Some(mx)) => Gens::choose(mn, mx).map(Some),
+      (none, _) if none.is_none() => Gens::pure(none),
+      (_, none) if none.is_none() => Gens::pure(none),
       _ => panic!("occurred error"),
     }
   }
@@ -27,9 +27,9 @@ where
 {
   fn choose(min: Self, max: Self) -> Gen<Self> {
     match (min, max) {
-      (Ok(mn), Ok(mx)) => Gens::choose(mn, mx).map(|n| Ok(n)),
-      (err, _) if err.is_err() => Gens::unit(err),
-      (_, err) if err.is_err() => Gens::unit(err),
+      (Ok(mn), Ok(mx)) => Gens::choose(mn, mx).map(Ok),
+      (err, _) if err.is_err() => Gens::pure(err),
+      (_, err) if err.is_err() => Gens::pure(err),
       _ => panic!("occurred error"),
     }
   }

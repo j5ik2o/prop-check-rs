@@ -6,23 +6,29 @@ use crate::gen::one::One;
 use crate::rng::{NextRandValue, RNG};
 use crate::state::State;
 use bigdecimal::Num;
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
+use std::rc::Rc;
 
 pub struct Gens;
 
 impl Gens {
-  pub fn unit<B>(value: B) -> Gen<B>
+  pub fn unit() -> Gen<()> {
+    Self::pure(())
+  }
+
+  pub fn pure<B>(value: B) -> Gen<B>
   where
     B: Clone + 'static, {
     Gen::<B>::new(State::unit(value))
   }
 
-  pub fn unit_lazy<B, F>(f: F) -> Gen<B>
+  pub fn pure_lazy<B, F>(f: F) -> Gen<B>
   where
     F: Fn() -> B + 'static,
     B: Clone + 'static, {
-    Self::unit(()).map(move |_| f())
+    Self::pure(()).map(move |_| f())
   }
 
   pub fn some<B>(g: Gen<B>) -> Gen<Option<B>>
@@ -34,7 +40,7 @@ impl Gens {
   pub fn option<B>(g: Gen<B>) -> Gen<Option<B>>
   where
     B: Debug + Clone + 'static, {
-    Self::frequency([(1, Self::unit(None)), (9, Self::some(g))])
+    Self::frequency([(1, Self::pure(None)), (9, Self::some(g))])
   }
 
   pub fn either<T, E>(gt: Gen<T>, ge: Gen<E>) -> Gen<Result<T, E>>
@@ -42,6 +48,12 @@ impl Gens {
     T: Choose + Clone + 'static,
     E: Clone + 'static, {
     Self::one_of([gt.map(Ok), ge.map(Err)])
+  }
+
+  pub fn frequency_values<B>(values: impl IntoIterator<Item = (u32, B)>) -> Gen<B>
+  where
+    B: Debug + Clone + 'static, {
+    Self::frequency(values.into_iter().map(|(n, v)| (n, Gens::pure(v))))
   }
 
   pub fn frequency<B>(values: impl IntoIterator<Item = (u32, Gen<B>)>) -> Gen<B>
@@ -148,12 +160,16 @@ impl Gens {
     Self::choose(0usize, vec.len() - 1).flat_map(move |idx| vec[idx as usize].clone())
   }
 
+  pub fn one_of_values<T: Choose + Clone + 'static>(values: impl IntoIterator<Item = T>) -> Gen<T> {
+    Self::one_of(values.into_iter().map(Gens::pure))
+  }
+
   pub fn choose<T: Choose>(min: T, max: T) -> Gen<T> {
     Choose::choose(min, max)
   }
 
   pub fn choose_char(min: char, max: char) -> Gen<char> {
-    let chars = (min..=max).into_iter().map(|e| Self::unit(e)).collect::<Vec<_>>();
+    let chars = (min..=max).into_iter().map(|e| Self::pure(e)).collect::<Vec<_>>();
     Self::one_of(chars)
   }
 
@@ -300,6 +316,42 @@ impl<A: Clone + 'static> Gen<A> {
   }
 }
 
+pub enum SGen<A> {
+  Sized(Rc<RefCell<dyn Fn(u32) -> Gen<A>>>),
+  Unsized(Gen<A>),
+}
+
+impl<A: Clone + 'static> Clone for SGen<A> {
+  fn clone(&self) -> Self {
+    match self {
+      SGen::Sized(f) => SGen::Sized(f.clone()),
+      SGen::Unsized(g) => SGen::Unsized(g.clone()),
+    }
+  }
+}
+
+impl<A: Clone + 'static> SGen<A> {
+  pub fn of_sized<F>(f: F) -> SGen<A>
+  where
+    F: Fn(u32) -> Gen<A> + 'static, {
+    SGen::Sized(Rc::new(RefCell::new(f)))
+  }
+
+  pub fn of_unsized(gen: Gen<A>) -> SGen<A> {
+    SGen::Unsized(gen)
+  }
+
+  pub fn run(&self, i: Option<u32>) -> Gen<A> {
+    match self {
+      SGen::Sized(f) => {
+        let mut mf = f.borrow_mut();
+        mf(i.unwrap())
+      }
+      SGen::Unsized(g) => g.clone(),
+    }
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -327,9 +379,9 @@ mod tests {
     #[test]
     fn test_left_identity_law() -> Result<()> {
       let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
-      let f = |x| Gens::unit(x);
-      let laws_prop = prop::for_all(gen, move |(s, n)| {
-        Gens::unit(n).flat_map(f).run(s.clone()) == f(n).run(s)
+      let f = |x| Gens::pure(x);
+      let laws_prop = prop::for_all_gen(gen, move |(s, n)| {
+        Gens::pure(n).flat_map(f).run(s.clone()) == f(n).run(s)
       });
       prop::test_with_prop(laws_prop, 1, 100, new_rng())
     }
@@ -338,8 +390,8 @@ mod tests {
     fn test_right_identity_law() -> Result<()> {
       let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
 
-      let laws_prop = prop::for_all(gen, move |(s, x)| {
-        Gens::unit(x).flat_map(|y| Gens::unit(y)).run(s.clone()) == Gens::unit(x).run(s)
+      let laws_prop = prop::for_all_gen(gen, move |(s, x)| {
+        Gens::pure(x).flat_map(|y| Gens::pure(y)).run(s.clone()) == Gens::pure(x).run(s)
       });
 
       prop::test_with_prop(laws_prop, 1, 100, new_rng())
@@ -348,10 +400,10 @@ mod tests {
     #[test]
     fn test_associativity_law() -> Result<()> {
       let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
-      let f = |x| Gens::unit(x * 2);
-      let g = |x| Gens::unit(x + 1);
-      let laws_prop = prop::for_all(gen, move |(s, x)| {
-        Gens::unit(x).flat_map(f).flat_map(g).run(s.clone()) == f(x).flat_map(g).run(s)
+      let f = |x| Gens::pure(x * 2);
+      let g = |x| Gens::pure(x + 1);
+      let laws_prop = prop::for_all_gen(gen, move |(s, x)| {
+        Gens::pure(x).flat_map(f).flat_map(g).run(s.clone()) == f(x).flat_map(g).run(s)
       });
       prop::test_with_prop(laws_prop, 1, 100, new_rng())
     }
@@ -359,17 +411,45 @@ mod tests {
 
   #[test]
   fn test_frequency() -> Result<()> {
+    let gens = [
+      (1, Gens::choose_u32(1, 10)),
+      (1, Gens::choose_u32(50, 100)),
+      (1, Gens::choose_u32(200, 300)),
+    ];
+    let gen = Gens::frequency(gens);
+    let prop = prop::for_all_gen(gen, move |a| {
+      log::info!("a: {}", a);
+      if a >= 1 && a <= 10 {
+        true
+      } else if a >= 50 && a <= 100 {
+        true
+      } else if a >= 200 && a <= 300 {
+        true
+      } else {
+        false
+      }
+    });
+    prop::test_with_prop(prop, 1, 100, new_rng())
+  }
+
+  #[test]
+  fn test_frequency_values() -> Result<()> {
     let result = Rc::new(RefCell::new(HashMap::new()));
     let cloned_map = result.clone();
-    let gens = [(1, Gens::unit("a")), (1, Gens::unit("b")), (8, Gens::unit("c"))];
-    let gen = Gens::frequency(gens);
-    let prop = prop::for_all(gen, move |a| {
+    let gens = [(1, "a"), (1, "b"), (8, "c")];
+    let gen = Gens::frequency_values(gens);
+    let prop = prop::for_all_gen(gen, move |a| {
       let mut map = result.borrow_mut();
       let r = map.entry(a).or_insert_with(|| 0);
       *r += 1;
       true
     });
     let r = prop::test_with_prop(prop, 1, 100, new_rng());
+    let map = cloned_map.borrow();
+    let a_count = map.get(&"a").unwrap();
+    let b_count = map.get(&"b").unwrap();
+    let c_count = map.get(&"c").unwrap();
+    assert_eq!(*a_count + *b_count + *c_count, 100);
     println!("{cloned_map:?}");
     r
   }
