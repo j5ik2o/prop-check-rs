@@ -16,13 +16,13 @@ use std::rc::Rc;
 pub struct Gens;
 
 impl Gens {
-  /// Generates a Gen that returns `()`.</br>
+  /// Generates a Gen that returns `()`.<br/>
   /// `()`を返すGenを生成します。
   pub fn unit() -> Gen<()> {
     Self::pure(())
   }
 
-  /// Generates a Gen that returns a value.</br>
+  /// Generates a Gen that returns a value.<br/>
   /// 値を返すGenを生成します。
   pub fn pure<B>(value: B) -> Gen<B>
   where
@@ -30,7 +30,7 @@ impl Gens {
     Gen::<B>::new(State::value(value))
   }
 
-  /// Generates a Gen that returns a value from a function.</br>
+  /// Generates a Gen that returns a value from a function.<br/>
   /// 関数が返す値を返すGenを生成します。
   pub fn pure_lazy<B, F>(f: F) -> Gen<B>
   where
@@ -106,7 +106,7 @@ impl Gens {
     One::one()
   }
 
-  /// Generates a Gen that returns a single value of type i64.
+  /// Generates a Gen that returns a single value of type i64.<br/>
   /// i64型の値を一つ返すGenを生成します。
   pub fn one_i64() -> Gen<i64> {
     Gen {
@@ -114,7 +114,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns a single value of type u64.
+  /// Generates a Gen that returns a single value of type u64.<br/>
   /// u64型の値を一つ返すGenを生成します。
   pub fn one_u64() -> Gen<u64> {
     Gen {
@@ -122,7 +122,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns a single value of type i32.
+  /// Generates a Gen that returns a single value of type i32.<br/>
   /// i32型の値を一つ返すGenを生成します。
   pub fn one_i32() -> Gen<i32> {
     Gen {
@@ -130,7 +130,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns a single value of type u32.
+  /// Generates a Gen that returns a single value of type u32.<br/>
   /// u32型の値を一つ返すGenを生成します。
   pub fn one_u32() -> Gen<u32> {
     Gen {
@@ -138,7 +138,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns a single value of type i16.
+  /// Generates a Gen that returns a single value of type i16.<br/>
   /// i16型の値を一つ返すGenを生成します。
   pub fn one_i16() -> Gen<i16> {
     Gen {
@@ -146,7 +146,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns a single value of type u16.
+  /// Generates a Gen that returns a single value of type u16.<br/>
   /// u16型の値を一つ返すGenを生成します。
   pub fn one_u16() -> Gen<u16> {
     Gen {
@@ -154,7 +154,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns a single value of type i8.
+  /// Generates a Gen that returns a single value of type i8.<br/>
   /// i8型の値を一つ返すGenを生成します。
   pub fn one_i8() -> Gen<i8> {
     Gen {
@@ -162,7 +162,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns a single value of type u8.
+  /// Generates a Gen that returns a single value of type u8.<br/>
   /// u8型の値を一つ返すGenを生成します。
   pub fn one_u8() -> Gen<u8> {
     Gen {
@@ -170,13 +170,13 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns a single value of type char.
+  /// Generates a Gen that returns a single value of type char.<br/>
   /// char型の値を一つ返すGenを生成します。
   pub fn one_char() -> Gen<char> {
     Self::one_u8().map(|v| v as char)
   }
 
-  /// Generates a Gen that returns a single value of type bool.
+  /// Generates a Gen that returns a single value of type bool.<br/>
   /// bool型の値を一つ返すGenを生成します。
   pub fn one_bool() -> Gen<bool> {
     Gen {
@@ -184,7 +184,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns a single value of type f64.
+  /// Generates a Gen that returns a single value of type f64.<br/>
   /// f64型の値を一つ返すGenを生成します。
   pub fn one_f64() -> Gen<f64> {
     Gen {
@@ -192,7 +192,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns a single value of type f32.
+  /// Generates a Gen that returns a single value of type f32.<br/>
   /// f32型の値を一つ返すGenを生成します。
   pub fn one_f32() -> Gen<f32> {
     Gen {
@@ -220,14 +220,14 @@ impl Gens {
     Choose::choose(min, max)
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type char.
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type char.<br/>
   /// char型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
   pub fn choose_char(min: char, max: char) -> Gen<char> {
     let chars = (min..=max).into_iter().map(|e| Self::pure(e)).collect::<Vec<_>>();
     Self::one_of(chars)
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i64.
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i64.<br/>
   /// i64型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
   pub fn choose_i64(min: i64, max: i64) -> Gen<i64> {
     Gen {
