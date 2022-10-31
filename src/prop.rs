@@ -14,11 +14,16 @@ pub type SuccessCount = u32;
 
 pub trait IsFalsified {
   fn is_falsified(&self) -> bool;
+  fn non_falsified(&self) -> bool {
+    !self.is_falsified()
+  }
 }
 
 #[derive(Clone)]
 pub enum PropResult {
-  Passed,
+  Passed {
+    test_cases: TestCases,
+  },
   Falsified {
     failure: FailedCase,
     successes: SuccessCount,
@@ -26,10 +31,65 @@ pub enum PropResult {
   Proved,
 }
 
+impl PropResult {
+  pub fn map<F>(self, f: F) -> PropResult
+  where
+    F: FnOnce(u32) -> u32, {
+    match self {
+      PropResult::Passed { test_cases } => PropResult::Passed {
+        test_cases: f(test_cases),
+      },
+      PropResult::Proved => PropResult::Proved,
+      other => other,
+    }
+  }
+
+  pub fn flat_map<F>(self, f: F) -> PropResult
+  where
+    F: FnOnce(Option<u32>) -> PropResult, {
+    match self {
+      PropResult::Passed { test_cases } => f(Some(test_cases)),
+      PropResult::Proved => f(None),
+      other => other,
+    }
+  }
+
+  pub fn to_result(self) -> Result<String> {
+    match self {
+      p @ PropResult::Passed { .. } => Ok(p.message()),
+      p @ PropResult::Proved => Ok(p.message()),
+      f @ PropResult::Falsified { .. } => Err(anyhow!(f.message())),
+    }
+  }
+
+  pub fn to_result_unit(self) -> Result<()> {
+    self
+      .to_result()
+      .map(|msg| {
+        log::info!("{}", msg);
+        ()
+      })
+      .map_err(|err| {
+        log::error!("{}", err);
+        err
+      })
+  }
+
+  pub fn message(&self) -> String {
+    match self {
+      PropResult::Passed { test_cases } => format!("OK, passed {} tests", test_cases),
+      PropResult::Proved => "OK, proved property".to_string(),
+      PropResult::Falsified { failure, successes } => {
+        format!("Falsified after {} passed tests: {}", failure, successes)
+      }
+    }
+  }
+}
+
 impl IsFalsified for PropResult {
   fn is_falsified(&self) -> bool {
     match self {
-      PropResult::Passed => false,
+      PropResult::Passed { .. } => false,
       PropResult::Falsified { .. } => true,
       PropResult::Proved => false,
     }
@@ -49,6 +109,7 @@ where
   )
 }
 
+/// Represents the function to evaluate the properties by using SGens.
 pub fn for_all_sgen<A, F, FF>(sgen: SGen<A>, mut f: FF) -> Prop
 where
   F: FnMut(A) -> bool + 'static,
@@ -60,6 +121,7 @@ where
   }
 }
 
+/// Represents the function to evaluate the properties by using Gens.
 pub fn for_all_gen_for_size<A, GF, F, FF>(gf: GF, mut f: FF) -> Prop
 where
   GF: Fn(u32) -> Gen<A> + 'static,
@@ -78,67 +140,51 @@ where
         .map(|p| Prop::new(move |max, _, rng| p.run(max, cases_per_size, rng)))
         .reduce(|l, r| l.and(r))
         .unwrap();
-      p.run(max, n, rng)
+      p.run(max, n, rng).flat_map(|_| PropResult::Proved)
     })),
   }
 }
 
-pub fn for_all_gen<A, F>(g: Gen<A>, mut f: F) -> Prop
+/// Represents the function to evaluate the properties by using Gens.
+pub fn for_all_gen<A, F>(g: Gen<A>, mut test: F) -> Prop
 where
   F: FnMut(A) -> bool + 'static,
   A: Clone + Debug + 'static, {
   Prop {
     run_f: Rc::new(RefCell::new(move |_, n, rng| {
-      let nl = itertools::iterate(1, |&i| i + 1).into_iter();
+      let success_counter = itertools::iterate(1, |&i| i + 1).into_iter();
       random_stream(g.clone(), rng)
-        .zip(nl)
+        .zip(success_counter)
         .take(n as usize)
-        .map(|(a, i): (A, u32)| {
-          if f(a.clone()) {
-            PropResult::Passed
+        .map(|(test_value, success_count)| {
+          if test(test_value.clone()) {
+            PropResult::Passed { test_cases: n }
           } else {
             PropResult::Falsified {
-              failure: format!("{:?}", a),
-              successes: i,
+              failure: format!("{:?}", test_value),
+              successes: success_count,
             }
           }
         })
         .find(move |e| e.is_falsified())
-        .unwrap_or(PropResult::Passed)
+        .unwrap_or(PropResult::Passed { test_cases: n })
     })),
   }
 }
 
+/// Execute the Prop.
+///
+/// # Arguments
+///
+/// * `max_size` - The maximum size of the generated value.
+/// * `test_cases` - The number of test cases.
+/// * `rng` - The random number generator.
 pub fn run_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result<String> {
-  match p.run(max_size, test_cases, rng) {
-    PropResult::Passed => Ok(format!("+ OK, passed {} tests.", test_cases)),
-    PropResult::Proved => Ok("+ OK, proved property.".to_string()),
-    PropResult::Falsified {
-      failure: msg,
-      successes: n,
-    } => Err(anyhow!("! Falsified after {} passed tests:\n {}", msg, n)),
-  }
+  p.run(max_size, test_cases, rng).to_result()
 }
 
 pub fn test_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result<()> {
-  match p.run(max_size, test_cases, rng) {
-    PropResult::Passed => {
-      log::info!("+ OK, passed {} tests.", test_cases);
-      Ok(())
-    }
-    PropResult::Proved => {
-      log::info!("{}", "+ OK, proved property.".to_string());
-      Ok(())
-    }
-    PropResult::Falsified {
-      failure: msg,
-      successes: n,
-    } => {
-      let error_message = format!("! Falsified after {} passed tests:\n {}", msg, n);
-      log::error!("{}", error_message);
-      Err(anyhow!(error_message))
-    }
-  }
+  p.run(max_size, test_cases, rng).to_result_unit()
 }
 
 pub struct Prop {
@@ -180,10 +226,11 @@ impl Prop {
     })
   }
 
-  pub fn and(self, p: Self) -> Prop {
+  /// .
+  pub fn and(self, other: Self) -> Prop {
     Self::new(
       move |max: MaxSize, n: TestCases, rng: RNG| match self.run(max, n, rng.clone()) {
-        PropResult::Passed | PropResult::Proved => p.run(max, n, rng),
+        PropResult::Passed { .. } | PropResult::Proved => other.run(max, n, rng),
         x => x,
       },
     )
