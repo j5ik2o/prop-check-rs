@@ -28,7 +28,7 @@ where
   S: 'static,
   A: Clone + 'static,
 {
-  pub fn unit(a: A) -> State<S, A> {
+  pub fn value(a: A) -> State<S, A> {
     Self::new(move |s| (a.clone(), s))
   }
 
@@ -120,17 +120,12 @@ where
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::rng::RNG;
   use std::env;
 
   #[ctor::ctor]
   fn init() {
     env::set_var("RUST_LOG", "info");
     let _ = env_logger::builder().is_test(true).try_init();
-  }
-
-  fn new_rng() -> RNG {
-    RNG::new()
   }
 
   #[test]
