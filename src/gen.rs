@@ -376,6 +376,7 @@ impl<A: Clone + 'static> Gen<A> {
     Gen { sample: b }
   }
 
+  /// Applies a function to Gen.<br/>
   /// Genに関数を適用します。
   pub fn map<B, F>(self, f: F) -> Gen<B>
   where
