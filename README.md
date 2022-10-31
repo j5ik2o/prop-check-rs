@@ -19,21 +19,19 @@ prop-check-rs = "<<version>>"
 
 ## Usage
 
+### Choose one value from a list
+
 ```rust
 #[test]
 fn test_one_of() -> Result<()> {
   let gen = Gens::one_of_values(['a', 'b', 'c', 'x', 'y', 'z']);
-  let prop = for_all(gen, move |value| {
+  let prop = for_all_gen(gen, move |value| {
       log::info!("value = {}", value);
       true
   });
   test_with_prop(prop, 1, 100, new_rng())
 }
 ```
-
-for example, https://github.com/j5ik2o/uri-rs/blob/main/src/parser/parsers/uri_parsers.rs
-
-
 
 ## License
 
