@@ -364,14 +364,19 @@ impl<A: Clone + 'static> Clone for Gen<A> {
 }
 
 impl<A: Clone + 'static> Gen<A> {
+  /// Evaluates expressions held by the Gen and generates values.<br/>
+  /// Genが保持する式を評価し値を生成します。  
   pub fn run(self, rng: RNG) -> (A, RNG) {
     self.sample.run(rng)
   }
 
+  /// Generate a Gen by specifying a State.<br/>
+  /// Stateを指定してGenを生成します。
   pub fn new<B>(b: State<RNG, B>) -> Gen<B> {
     Gen { sample: b }
   }
 
+  /// Genに関数を適用します。
   pub fn map<B, F>(self, f: F) -> Gen<B>
   where
     F: Fn(A) -> B + 'static,
@@ -379,6 +384,8 @@ impl<A: Clone + 'static> Gen<A> {
     Self::new(self.sample.map(f))
   }
 
+  /// Applies a function that takes the result of two Gen's as arguments.<br/>
+  /// 二つのGenの結果を引数に取る関数を適用します。
   pub fn and_then<B, C, F>(self, g: Gen<B>, f: F) -> Gen<C>
   where
     F: Fn(A, B) -> C + 'static,
@@ -388,6 +395,8 @@ impl<A: Clone + 'static> Gen<A> {
     Self::new(self.sample.and_then(g.sample).map(move |(a, b)| f(a, b)))
   }
 
+  /// Applies a function to a Gen that takes the result of the Gen as an argument and returns the result.<br/>
+  /// Genに対してそのGenの結果を引数にとりGenを返す関数を適用しその結果を返します。
   pub fn flat_map<B, F>(self, f: F) -> Gen<B>
   where
     F: Fn(A) -> Gen<B> + 'static,
