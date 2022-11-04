@@ -1,4 +1,3 @@
-#![feature(box_syntax)]
 pub mod gen;
 pub mod machine;
 pub mod prop;
