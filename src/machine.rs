@@ -58,7 +58,7 @@ impl Machine {
             candies: candy - 1,
             coins: coin,
           },
-          (_, Machine { .. }) => s.clone(),
+          (_, Machine { .. }) => s,
         }
       })
     })

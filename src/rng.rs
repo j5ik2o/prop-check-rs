@@ -226,13 +226,13 @@ impl RNG {
     A: Clone + 'static,
     F: FnMut(RNG) -> (A, RNG) + 'static, {
     let unit = Self::unit(Vec::<A>::new());
-    let result = fs.into_iter().fold(unit, |acc, e| {
+    
+    fs.into_iter().fold(unit, |acc, e| {
       Self::map2(acc, e, |mut a, b| {
         a.push(b);
         a
       })
-    });
-    result
+    }) as _
   }
 
   pub fn int_value() -> BoxRand<i32> {
@@ -276,7 +276,7 @@ impl RNG {
     Self::both(Self::int_value(), Self::double_value())
   }
 
-  pub fn rand_double_int<'a>() -> BoxRand<(f32, i32)> {
+  pub fn rand_double_int() -> BoxRand<(f32, i32)> {
     Self::both(Self::double_value(), Self::int_value())
   }
 

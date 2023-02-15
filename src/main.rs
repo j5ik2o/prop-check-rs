@@ -14,8 +14,8 @@ fn ints3() {
   println!(
     "{}: {}...{}",
     COUNT,
-    rands.get(0).unwrap(),
-    rands.get(rands.len() - 1).unwrap()
+    rands.first().unwrap(),
+    rands.last().unwrap()
   );
 }
 

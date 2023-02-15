@@ -54,7 +54,7 @@ impl PropResult {
     }
   }
 
-  pub fn to_result(self) -> Result<String> {
+  pub fn into_result(self) -> Result<String> {
     match self {
       p @ PropResult::Passed { .. } => Ok(p.message()),
       p @ PropResult::Proved => Ok(p.message()),
@@ -62,12 +62,11 @@ impl PropResult {
     }
   }
 
-  pub fn to_result_unit(self) -> Result<()> {
+  pub fn into_result_unit(self) -> Result<()> {
     self
-      .to_result()
+      .into_result()
       .map(|msg| {
         log::info!("{}", msg);
-        ()
       })
       .map_err(|err| {
         log::error!("{}", err);
@@ -152,7 +151,7 @@ where
   A: Clone + Debug + 'static, {
   Prop {
     run_f: Rc::new(RefCell::new(move |_, n, rng| {
-      let success_counter = itertools::iterate(1, |&i| i + 1).into_iter();
+      let success_counter = itertools::iterate(1, |&i| i + 1);
       random_stream(g.clone(), rng)
         .zip(success_counter)
         .take(n as usize)
@@ -180,11 +179,11 @@ where
 /// * `test_cases` - The number of test cases.
 /// * `rng` - The random number generator.
 pub fn run_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result<String> {
-  p.run(max_size, test_cases, rng).to_result()
+  p.run(max_size, test_cases, rng).into_result()
 }
 
 pub fn test_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result<()> {
-  p.run(max_size, test_cases, rng).to_result_unit()
+  p.run(max_size, test_cases, rng).into_result_unit()
 }
 
 pub struct Prop {
