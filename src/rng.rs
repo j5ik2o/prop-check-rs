@@ -7,14 +7,6 @@ type BoxRand<T, A> = Box<DynRand<T, A>>;
 pub trait PropRng: Rng + Clone
 where
   Self: Sized + 'static, {
-  fn int_value() -> BoxRand<Self, i32> {
-    Box::new(move |mut rng| (rng.gen(), rng.clone()))
-  }
-
-  fn double_value() -> BoxRand<Self, f32> {
-    Box::new(move |mut rng| (rng.gen(), rng.clone()))
-  }
-
   fn map<A, B, F1, F2>(mut s: F1, mut f: F2) -> BoxRand<Self, B>
   where
     F1: FnMut(Self) -> (A, Self) + 'static,
@@ -62,14 +54,6 @@ where
         a
       })
     })
-  }
-
-  fn rand_int_double() -> BoxRand<Self, (i32, f32)> {
-    Self::both(Self::int_value(), Self::double_value())
-  }
-
-  fn rand_double_int() -> BoxRand<Self, (f32, i32)> {
-    Self::both(Self::double_value(), Self::int_value())
   }
 
   fn flat_map<A, B, F, GF, BF>(mut f: F, mut g: GF) -> BoxRand<Self, B>
