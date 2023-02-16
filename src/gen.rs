@@ -1,8 +1,8 @@
 use crate::rng::PropRng;
 use crate::state::State;
 
-use rand::distributions::{Standard, Distribution};
 use rand::distributions::uniform::SampleUniform;
+use rand::distributions::{Distribution, Standard};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
@@ -70,11 +70,12 @@ impl<R: PropRng + 'static> Gens<R> {
   where
     B: Debug + Clone + 'static, {
     let filtered = values.into_iter().filter(|kv| kv.0 > 0);
-    let (tree, total) = filtered.fold((BTreeMap::new(), 0), |(mut tree, total), (weight, value)| {
-      let t = total + weight;
-      tree.insert(t, value);
-      (tree, t)
-    });
+    let (tree, total): (BTreeMap<u32, Gen<R, B>>, u32) =
+      filtered.fold((BTreeMap::new(), 0), |(mut tree, total), (weight, value)| {
+        let t = total + weight;
+        tree.insert(t, value);
+        (tree, t)
+      });
     Self::choose(1, total).flat_map(move |n| tree.range(n..).next().unwrap().1.clone())
   }
 
@@ -90,8 +91,8 @@ impl<R: PropRng + 'static> Gens<R> {
 
   /// Makes a Gen that returns a single value of a certain type.<br/>
   pub fn one<T: Clone + 'static>() -> Gen<R, T>
-  where Standard : Distribution<T>
-   {
+  where
+    Standard: Distribution<T>, {
     Gen {
       sample: State::<R, T>::new(move |mut rng: R| (rng.gen(), rng.clone())),
     }
@@ -115,7 +116,7 @@ impl<R: PropRng + 'static> Gens<R> {
   /// Makes a Gen that returns one randomly selected value from the specified maximum and minimum ranges of generic type.<br/>
   pub fn choose<T>(min: T, max: T) -> Gen<R, T>
   where
-    T: SampleUniform + PartialOrd + Clone + 'static {
+    T: SampleUniform + PartialOrd + Clone + 'static, {
     Gen {
       sample: State::<R, T>::new(move |mut rng: R| (rng.gen_range(min.clone()..max.clone()), rng.clone())),
     }
@@ -143,8 +144,8 @@ impl<T: PropRng, A: Clone + 'static> Gen<T, A> {
   pub fn map<B, F>(self, f: F) -> Gen<T, B>
   where
     F: Fn(A) -> B + 'static,
-    B: Clone + 'static, 
-    T: 'static {
+    B: Clone + 'static,
+    T: 'static, {
     Self::new(self.sample.map(f))
   }
 
@@ -155,7 +156,7 @@ impl<T: PropRng, A: Clone + 'static> Gen<T, A> {
     A: Clone,
     B: Clone + 'static,
     C: Clone + 'static,
-    T: 'static {
+    T: 'static, {
     Self::new(self.sample.and_then(g.sample).map(move |(a, b)| f(a, b)))
   }
 
@@ -164,7 +165,7 @@ impl<T: PropRng, A: Clone + 'static> Gen<T, A> {
   where
     F: Fn(A) -> Gen<T, B> + 'static,
     B: Clone + 'static,
-    T: 'static {
+    T: 'static, {
     Self::new(self.sample.flat_map(move |a| f(a).sample))
   }
 }
@@ -211,7 +212,7 @@ mod tests {
   use super::*;
   use crate::prop;
   use anyhow::Result;
-use rand::thread_rng;
+  use rand::thread_rng;
 
   use std::cell::RefCell;
   use std::collections::HashMap;
@@ -225,7 +226,7 @@ use rand::thread_rng;
   }
 
   pub mod laws {
-    use rand::{rngs::StdRng, SeedableRng, thread_rng};
+    use rand::{rngs::StdRng, thread_rng, SeedableRng};
 
     use super::*;
 
