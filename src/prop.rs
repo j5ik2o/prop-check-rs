@@ -95,7 +95,8 @@ impl IsFalsified for PropResult {
   }
 }
 
-fn random_stream<T: PropRng, A>(g: Gen<T, A>, rng: T) -> Unfold<T, Box<dyn FnMut(&mut T) -> Option<A>>>
+type DynOptFn<T, A> = dyn FnMut(&mut T) -> Option<A>;
+fn random_stream<T: PropRng, A>(g: Gen<T, A>, rng: T) -> Unfold<T, Box<DynOptFn<T, A>>>
 where
   A: Clone + 'static, {
   itertools::unfold(
@@ -182,12 +183,20 @@ pub fn run_with_prop<T: PropRng>(p: Prop<T>, max_size: MaxSize, test_cases: Test
   p.run(max_size, test_cases, rng).into_result()
 }
 
+/// Test the Prop.
+///
+/// # Arguments
+///
+/// * `max_size` - The maximum size of the generated value.
+/// * `test_cases` - The number of test cases.
+/// * `rng` - The random number generator.
 pub fn test_with_prop<T: PropRng>(p: Prop<T>, max_size: MaxSize, test_cases: TestCases, rng: T) -> Result<()> {
   p.run(max_size, test_cases, rng).into_result_unit()
 }
 
+type DynProp<T> = dyn FnMut(MaxSize, TestCases, T) -> PropResult;
 pub struct Prop<T: PropRng> {
-  run_f: Rc<RefCell<dyn FnMut(MaxSize, TestCases, T) -> PropResult>>,
+  run_f: Rc<RefCell<DynProp<T>>>,
 }
 
 impl<T: PropRng> Clone for Prop<T> {

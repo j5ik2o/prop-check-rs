@@ -1,5 +1,4 @@
 use rand::Rng;
-use rand::distributions::{Distribution, Standard};
 
 type DynRand<T, A> = dyn FnMut(T) -> (A, T);
 type BoxRand<T, A> = Box<DynRand<T, A>>;
@@ -65,13 +64,6 @@ where
       let (a, r1) = f(rng);
       (g(a))(r1)
     })
-  }
-
-  fn gen_unfold<T>(&self) -> (T, Self)
-  where
-    Standard: Distribution<T>, {
-    let mut rng = self.clone();
-    (rng.gen(), rng)
   }
 }
 

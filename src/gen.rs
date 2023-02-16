@@ -169,8 +169,9 @@ impl<T: PropRng, A: Clone + 'static> Gen<T, A> {
   }
 }
 
+type DynSGen<T, A> = dyn Fn(u32) -> Gen<T, A>;
 pub enum SGen<T: PropRng + 'static, A: 'static> {
-  Sized(Rc<RefCell<dyn Fn(u32) -> Gen<T, A>>>),
+  Sized(Rc<RefCell<DynSGen<T, A>>>),
   Unsized(Gen<T, A>),
 }
 
