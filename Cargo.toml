@@ -21,7 +21,7 @@ bigdecimal = "0.3.0"
 iso-4217 = "0.1"
 num-bigint = "0.4"
 itertools = "0.10.5"
-anyhow = "1.0.70"
+anyhow = "1.0.71"
 
 [dev-dependencies]
 env_logger = "0.10.0"
