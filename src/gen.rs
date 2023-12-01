@@ -503,31 +503,51 @@ mod tests {
 
   #[test]
   fn test_frequency() -> Result<()> {
+    let result = Rc::new(RefCell::new(HashMap::new()));
+    let cloned_map = result.clone();
+
     let gens = [
       (1, Gens::choose_u32(1, 10)),
-      (1, Gens::choose_u32(50, 100)),
+      (3, Gens::choose_u32(50, 100)),
       (1, Gens::choose_u32(200, 300)),
     ];
     let gen = Gens::frequency(gens);
     let prop = prop::for_all_gen(gen, move |a| {
+      let mut map = result.borrow_mut();
       log::info!("a: {}", a);
       if a >= 1 && a <= 10 {
+        let r = map.entry(1).or_insert_with(|| 0);
+        *r += 1;
         true
       } else if a >= 50 && a <= 100 {
+        let r = map.entry(2).or_insert_with(|| 0);
+        *r += 1;
         true
       } else if a >= 200 && a <= 300 {
+        let r = map.entry(3).or_insert_with(|| 0);
+        *r += 1;
         true
       } else {
         false
       }
     });
-    prop::test_with_prop(prop, 1, 100, new_rng())
+    let r = prop::test_with_prop(prop, 1, 100, new_rng());
+
+    let map = cloned_map.borrow();
+    let a_count = map.get(&1).unwrap();
+    let b_count = map.get(&2).unwrap();
+    let c_count = map.get(&3).unwrap();
+
+    assert_eq!(*a_count + *b_count + *c_count, 100);
+    println!("{cloned_map:?}");
+    r
   }
 
   #[test]
   fn test_frequency_values() -> Result<()> {
     let result = Rc::new(RefCell::new(HashMap::new()));
     let cloned_map = result.clone();
+
     let gens = [(1, "a"), (1, "b"), (8, "c")];
     let gen = Gens::frequency_values(gens);
     let prop = prop::for_all_gen(gen, move |a| {
@@ -537,10 +557,12 @@ mod tests {
       true
     });
     let r = prop::test_with_prop(prop, 1, 100, new_rng());
+
     let map = cloned_map.borrow();
     let a_count = map.get(&"a").unwrap();
     let b_count = map.get(&"b").unwrap();
     let c_count = map.get(&"c").unwrap();
+
     assert_eq!(*a_count + *b_count + *c_count, 100);
     println!("{cloned_map:?}");
     r
