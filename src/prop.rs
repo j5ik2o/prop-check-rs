@@ -332,7 +332,6 @@ mod tests {
   use anyhow::Result;
   use std::env;
 
-  #[ctor::ctor]
   fn init() {
     env::set_var("RUST_LOG", "info");
     let _ = env_logger::builder().is_test(true).try_init();
@@ -344,6 +343,7 @@ mod tests {
 
   #[test]
   fn test_one_of() -> Result<()> {
+    init();
     let gen = Gens::one_of_values(['a', 'b', 'c', 'x', 'y', 'z']);
     let prop = for_all_gen(gen, move |a| {
       log::info!("value = {}", a);
@@ -354,6 +354,7 @@ mod tests {
 
   #[test]
   fn test_one_of_2() -> Result<()> {
+    init();
     let mut counter = 0;
     let gen = Gens::one_of_values(['a', 'b', 'c', 'x', 'y', 'z']);
     let prop = for_all_gen_for_size(

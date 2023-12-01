@@ -122,16 +122,61 @@ mod tests {
   use super::*;
   use std::env;
 
-  #[ctor::ctor]
   fn init() {
     env::set_var("RUST_LOG", "info");
     let _ = env_logger::builder().is_test(true).try_init();
   }
 
+  pub mod laws {
+    use super::*;
+
+    #[test]
+    fn test_left_identity_law() {
+      init();
+      let n = 10;
+      let s = 11;
+      let f = |x| State::<i32, i32>::pure(x);
+      let result = State::<i32, i32>::pure(n).flat_map(f).run(s.clone()) == f(n).run(s);
+      assert!(result);
+    }
+
+    #[test]
+    fn test_right_identity_law() {
+      init();
+      let x = 10;
+      let s = 11;
+      let result = State::<i32, i32>::pure(x)
+        .flat_map(|y| State::<i32, i32>::pure(y))
+        .run(s.clone())
+        == State::<i32, i32>::pure(x).run(s);
+      assert!(result);
+    }
+
+    #[test]
+    fn test_associativity_law() {
+      init();
+      let x = 10;
+      let s = 11;
+      let f = |x| State::<i32, i32>::pure(x * 2);
+      let g = |x| State::<i32, i32>::pure(x + 1);
+      let result = State::<i32, i32>::pure(x).flat_map(f).flat_map(g).run(s.clone()) == f(x).flat_map(g).run(s);
+      assert!(result);
+    }
+  }
+
   #[test]
-  fn state() {
+  fn pure() {
+    init();
     let s = State::<u32, u32>::pure(10);
     let r = s.run(10);
-    log::info!("{:?}", r);
+    assert_eq!(r, (10, 10));
+  }
+
+  #[test]
+  // #[should_panic]
+  fn should_panic_when_running_with_null_state() {
+    let state: State<Option<i32>, i32> = State::<Option<i32>, i32>::new(|s| (10, s));
+    let result = state.run(None);
+    assert_eq!(result, (10, None));
   }
 }
