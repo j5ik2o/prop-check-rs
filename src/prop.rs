@@ -12,6 +12,8 @@ pub type TestCases = u32;
 pub type FailedCase = String;
 pub type SuccessCount = u32;
 
+/// The trait to return the failure of the property.<br/>
+/// プロパティの失敗を返すためのトレイト.
 pub trait IsFalsified {
   fn is_falsified(&self) -> bool;
   fn non_falsified(&self) -> bool {
@@ -19,19 +21,28 @@ pub trait IsFalsified {
   }
 }
 
+/// Represents the result of the property.<br/>
+/// プロパティの結果を表す.
 #[derive(Clone)]
 pub enum PropResult {
+  /// The property is passed.
   Passed {
+    /// The number of test cases.
     test_cases: TestCases,
   },
+  /// The property is falsified.
   Falsified {
+    /// The failure of the property.
     failure: FailedCase,
+    /// The number of successes.
     successes: SuccessCount,
   },
   Proved,
 }
 
 impl PropResult {
+  /// The `map` method can change the number of test cases.<br/>
+  /// mapメソッドはテストケースの数を変更することができる.
   pub fn map<F>(self, f: F) -> PropResult
   where
     F: FnOnce(u32) -> u32, {
@@ -44,6 +55,8 @@ impl PropResult {
     }
   }
 
+  /// The `flat_map` method can change the number of test cases.<br/>
+  /// flat_mapメソッドはテストケースの数を変更することができる.
   pub fn flat_map<F>(self, f: F) -> PropResult
   where
     F: FnOnce(Option<u32>) -> PropResult, {
@@ -54,6 +67,8 @@ impl PropResult {
     }
   }
 
+  /// The `to_result` method can convert the PropResult to Result.<br/>
+  /// to_resultメソッドはPropResultをResultに変換することができる.
   pub fn to_result(self) -> Result<String> {
     match self {
       p @ PropResult::Passed { .. } => Ok(p.message()),
@@ -62,6 +77,8 @@ impl PropResult {
     }
   }
 
+  /// The `to_result_unit` method can convert the PropResult to Result.<br/>
+  /// to_result_unitメソッドはPropResultをResultに変換することができる.
   pub fn to_result_unit(self) -> Result<()> {
     self
       .to_result()
@@ -75,6 +92,8 @@ impl PropResult {
       })
   }
 
+  /// The `message` method can return the message of the PropResult.<br/>
+  /// messageメソッドはPropResultのメッセージを返すことができる.
   pub fn message(&self) -> String {
     match self {
       PropResult::Passed { test_cases } => format!("OK, passed {} tests", test_cases),
@@ -121,7 +140,8 @@ where
   }
 }
 
-/// Represents the function to evaluate the properties by using Gens.
+/// Represents the function to evaluate the properties by using Gens.<br/>
+/// Gensを利用してプロパティを評価する関数を表す。
 pub fn for_all_gen_for_size<A, GF, F, FF>(gf: GF, mut f: FF) -> Prop
 where
   GF: Fn(u32) -> Gen<A> + 'static,
@@ -145,7 +165,15 @@ where
   }
 }
 
-/// Represents the function to evaluate the properties by using Gens.
+/// Represents the function to evaluate the properties by using Gens.<br/>
+/// Gensを利用してプロパティを評価する関数を表す。
+///
+/// # Arguments
+/// - `g` - The Gen.
+/// - `test` - The function to evaluate the properties.
+///
+/// # Returns
+/// - `Prop` - The new Prop.
 pub fn for_all_gen<A, F>(g: Gen<A>, mut test: F) -> Prop
 where
   F: FnMut(A) -> bool + 'static,
@@ -175,18 +203,31 @@ where
 /// Execute the Prop.
 ///
 /// # Arguments
+/// - `max_size` - The maximum size of the generated value.
+/// - `test_cases` - The number of test cases.
+/// - `rng` - The random number generator.
 ///
-/// * `max_size` - The maximum size of the generated value.
-/// * `test_cases` - The number of test cases.
-/// * `rng` - The random number generator.
+/// # Returns
+/// - `Result<String>` - The result of the Prop.
 pub fn run_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result<String> {
   p.run(max_size, test_cases, rng).to_result()
 }
 
+/// Execute the Prop.
+///
+/// # Arguments
+/// - `max_size` - The maximum size of the generated value.
+/// - `test_cases` - The number of test cases.
+/// - `rng` - The random number generator.
+///
+/// # Returns
+/// - `Result<()>` - The result of the Prop.
 pub fn test_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> Result<()> {
   p.run(max_size, test_cases, rng).to_result_unit()
 }
 
+/// Represents the property.<br/>
+/// プロパティを表す。
 pub struct Prop {
   run_f: Rc<RefCell<dyn FnMut(MaxSize, TestCases, RNG) -> PropResult>>,
 }
@@ -200,6 +241,13 @@ impl Clone for Prop {
 }
 
 impl Prop {
+  /// Create a new Prop.
+  ///
+  /// # Arguments
+  /// - `f` - The function to evaluate the properties.
+  ///
+  /// # Returns
+  /// - `Prop` - The new Prop.
   pub fn new<F>(f: F) -> Prop
   where
     F: Fn(MaxSize, TestCases, RNG) -> PropResult + 'static, {
@@ -208,11 +256,27 @@ impl Prop {
     }
   }
 
+  /// Execute the Prop.
+  ///
+  /// # Arguments
+  /// - `max_size` - The maximum size of the generated value.
+  /// - `test_cases` - The number of test cases.
+  /// - `rng` - The random number generator.
+  ///
+  /// # Returns
+  /// - `PropResult` - The result of the Prop.
   pub fn run(&self, max_size: MaxSize, test_cases: TestCases, rng: RNG) -> PropResult {
     let mut f = self.run_f.borrow_mut();
     f(max_size, test_cases, rng)
   }
 
+  /// The `tag` method can add a message to the PropResult.
+  ///
+  /// # Arguments
+  /// - `msg` - The message.
+  ///
+  /// # Returns
+  /// - `Prop` - The tagged Prop.
   pub fn tag(self, msg: String) -> Prop {
     Prop::new(move |max, n, rng| match self.run(max, n, rng) {
       PropResult::Falsified {
@@ -226,7 +290,14 @@ impl Prop {
     })
   }
 
-  /// .
+  /// The `and` method can combine a other Prop.
+  /// If the first Prop is passed, the second Prop is executed.
+  ///
+  /// # Arguments
+  /// - `other` - The other Prop.
+  ///
+  /// # Returns
+  /// - `Prop` - The combined Prop.
   pub fn and(self, other: Self) -> Prop {
     Self::new(
       move |max: MaxSize, n: TestCases, rng: RNG| match self.run(max, n, rng.clone()) {
@@ -236,9 +307,17 @@ impl Prop {
     )
   }
 
-  pub fn or(self, p: Self) -> Prop {
+  /// The 'or' method can combine a other Prop.
+  /// If the first Prop is falsified, the second Prop is executed.
+  ///
+  /// # Arguments
+  /// - `other` - The other Prop.
+  ///
+  /// # Returns
+  /// - `Prop` - The combined Prop.
+  pub fn or(self, other: Self) -> Prop {
     Self::new(move |max, n, rng: RNG| match self.run(max, n, rng.clone()) {
-      PropResult::Falsified { failure: msg, .. } => p.clone().tag(msg).run(max, n, rng),
+      PropResult::Falsified { failure: msg, .. } => other.clone().tag(msg).run(max, n, rng),
       x => x,
     })
   }

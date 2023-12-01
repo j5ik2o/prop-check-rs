@@ -453,7 +453,6 @@ mod tests {
   use std::env;
   use std::rc::Rc;
 
-  #[ctor::ctor]
   fn init() {
     env::set_var("RUST_LOG", "info");
     let _ = env_logger::builder().is_test(true).try_init();
@@ -468,7 +467,8 @@ mod tests {
 
     #[test]
     fn test_left_identity_law() -> Result<()> {
-      let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
+      init();
+      let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new().with_seed(e as u64), e));
       let f = |x| Gens::pure(x);
       let laws_prop = prop::for_all_gen(gen, move |(s, n)| {
         Gens::pure(n).flat_map(f).run(s.clone()) == f(n).run(s)
@@ -478,7 +478,8 @@ mod tests {
 
     #[test]
     fn test_right_identity_law() -> Result<()> {
-      let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
+      init();
+      let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new().with_seed(e as u64), e));
 
       let laws_prop = prop::for_all_gen(gen, move |(s, x)| {
         Gens::pure(x).flat_map(|y| Gens::pure(y)).run(s.clone()) == Gens::pure(x).run(s)
@@ -489,7 +490,8 @@ mod tests {
 
     #[test]
     fn test_associativity_law() -> Result<()> {
-      let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new_with_seed(e as u64), e));
+      init();
+      let gen = Gens::choose_i32(1, i32::MAX / 2).map(|e| (RNG::new().with_seed(e as u64), e));
       let f = |x| Gens::pure(x * 2);
       let g = |x| Gens::pure(x + 1);
       let laws_prop = prop::for_all_gen(gen, move |(s, x)| {
