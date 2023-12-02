@@ -1,6 +1,8 @@
 use std::fmt::{Debug, Formatter};
 use std::rc::Rc;
 
+/// The `State` monad represents a stateful computation.<br/>
+/// `State`モナドは状態付き計算を表します。
 pub struct State<S, A> {
   pub(crate) run_f: Rc<dyn Fn(S) -> (A, S)>,
 }
@@ -28,26 +30,36 @@ where
   S: 'static,
   A: Clone + 'static,
 {
+  /// Create a new State with a value.
+  /// 値を返すStateを作成します。
   pub fn value(a: A) -> State<S, A> {
     Self::new(move |s| (a.clone(), s))
   }
 
+  /// Create a new State.<br/>
+  /// 新しいStateを作成します。
   pub fn new<T, B, F>(f: F) -> State<T, B>
   where
     F: Fn(T) -> (B, T) + 'static, {
     State { run_f: Rc::new(f) }
   }
 
+  /// Alias for Self::value.<br/>
+  /// Self::valueのエイリアス。
   pub fn pure<B>(b: B) -> State<S, B>
   where
     B: Clone + 'static, {
     Self::new(move |s| (b.clone(), s))
   }
 
+  /// Run the State.<br/>
+  /// Stateを実行します。
   pub fn run(self, s: S) -> (A, S) {
     (self.run_f)(s)
   }
 
+  /// Map the State.<br/>
+  /// Stateをマップします。
   pub fn map<B, F>(self, f: F) -> State<S, B>
   where
     F: Fn(A) -> B + 'static,
@@ -55,13 +67,8 @@ where
     self.flat_map(move |a| Self::pure(f(a)))
   }
 
-  pub fn and_then<B>(self, sb: State<S, B>) -> State<S, (A, B)>
-  where
-    A: Clone,
-    B: Clone + 'static, {
-    self.flat_map(move |a| sb.clone().flat_map(move |b| Self::pure((a.clone(), b))))
-  }
-
+  /// FlatMap the State.<br/>
+  /// Stateをフラットマップします。
   pub fn flat_map<B, F>(self, f: F) -> State<S, B>
   where
     F: Fn(A) -> State<S, B> + 'static,
@@ -72,6 +79,33 @@ where
     })
   }
 
+  /// Compose two States.<br/>
+  /// 2つのStateを合成します。
+  pub fn and_then<B>(self, sb: State<S, B>) -> State<S, (A, B)>
+  where
+    A: Clone,
+    B: Clone + 'static, {
+    self.flat_map(move |a| sb.clone().flat_map(move |b| Self::pure((a.clone(), b))))
+  }
+
+  /// Get the state.<br/>
+  /// 状態を取得します。
+  pub fn get<T>() -> State<T, T>
+  where
+    T: Clone, {
+    Self::new(move |t: T| (t.clone(), t))
+  }
+
+  /// Set the state.<br/>
+  /// 状態を設定します。
+  pub fn set<T>(t: T) -> State<T, ()>
+  where
+    T: Clone + 'static, {
+    Self::new(move |_| ((), t.clone()))
+  }
+
+  /// Modify the state after get it.<br/>
+  /// 状態を取得した後に変更します。
   pub fn modify<T, F>(f: F) -> State<T, ()>
   where
     F: Fn(T) -> T + 'static,
@@ -80,18 +114,8 @@ where
     s.flat_map(move |t: T| Self::set(f(t)))
   }
 
-  pub fn get<T>() -> State<T, T>
-  where
-    T: Clone, {
-    Self::new(move |t: T| (t.clone(), t))
-  }
-
-  pub fn set<T>(t: T) -> State<T, ()>
-  where
-    T: Clone + 'static, {
-    Self::new(move |_| ((), t.clone()))
-  }
-
+  /// Execute the State and return a State with the result in the collection.<br/>
+  /// Stateを実行し結果をコレクションに持つStateを返します。
   pub fn sequence(sas: Vec<State<S, A>>) -> State<S, Vec<A>> {
     Self::new(move |s| {
       let mut s_ = s;
