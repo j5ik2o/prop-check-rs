@@ -111,7 +111,7 @@ impl PropResult {
   }
 
   /// The `message` method can return the message of the PropResult.<br/>
-  /// messageメソッドはPropResultのメッセージを返すことができる.
+  /// messageメソッドはPropResultのメッセージを返すことができる。
   ///
   /// # Returns
   /// - `String` - The message of the PropResult.
@@ -149,20 +149,28 @@ where
   )
 }
 
-/// Represents the function to evaluate the properties by using SGens.
-pub fn for_all_sgen<A, F, FF>(sgen: SGen<A>, mut f: FF) -> Prop
+/// Returns a Prop that executes a function to evaluate properties using SGen.<br/>
+/// SGenを利用してプロパティを評価するため関数を実行するPropを返す。
+///
+/// # Arguments
+/// - `sgen` - The SGen.
+/// - `test` - The function to evaluate the properties.
+///
+/// # Returns
+/// - `Prop` - The new Prop.
+pub fn for_all_sgen<A, F, FF>(sgen: SGen<A>, mut test: FF) -> Prop
 where
   F: FnMut(A) -> bool + 'static,
   FF: FnMut() -> F + 'static,
   A: Clone + Debug + 'static, {
   match sgen {
-    SGen::Unsized(g) => for_all_gen(g, f()),
-    s @ SGen::Sized(..) => for_all_gen_for_size(move |i| s.run(Some(i)), f),
+    SGen::Unsized(g) => for_all_gen(g, test()),
+    s @ SGen::Sized(..) => for_all_gen_for_size(move |i| s.run(Some(i)), test),
   }
 }
 
-/// サイズを与えたGenを利用してプロパティを評価するため関数を実行するPropを返す
-/// Returns a Prop that executes a function to evaluate properties using Gen with size.
+/// Returns a Prop that executes a function to evaluate properties using Gen with size.<br/>
+/// サイズを与えたGenを利用してプロパティを評価するため関数を実行するPropを返す。
 ///
 /// # Arguments
 /// - `gf` - The function to create a Gen with size.

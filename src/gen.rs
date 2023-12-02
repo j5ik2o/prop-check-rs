@@ -516,9 +516,9 @@ mod tests {
     let cloned_map = result.clone();
 
     let gens = [
-      (1, Gens::choose(1, 10)),
-      (3, Gens::choose(50, 100)),
-      (1, Gens::choose(200, 300)),
+      (1, Gens::choose(1u32, 10)),
+      (3, Gens::choose(50u32, 100)),
+      (1, Gens::choose(200u32, 300)),
     ];
     let gen = Gens::frequency(gens);
     let prop = prop::for_all_gen(gen, move |a| {
