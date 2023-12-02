@@ -30,7 +30,7 @@ where
   S: 'static,
   A: Clone + 'static,
 {
-  /// Create a new State with a value.
+  /// Create a new State with a value.<br/>
   /// 値を返すStateを作成します。
   pub fn value(a: A) -> State<S, A> {
     Self::new(move |s| (a.clone(), s))

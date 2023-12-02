@@ -1,55 +1,83 @@
 use rand::prelude::*;
 
+/// The trait to generate random values.<br/>
+/// ランダムな値を生成するためのトレイトです。
 pub trait NextRandValue
 where
   Self: Sized, {
+  /// `next_i64` generates a tuple of `i64` and `Self`.<br/>
+  /// `next_i64`は`i64`と`Self`のタプルを生成します。
   fn next_i64(&self) -> (i64, Self);
 
+  /// `next_u64` generates a tuple of `u64` and `Self`.<br/>
+  /// `next_u64`は`u64`と`Self`のタプルを生成します。
   fn next_u64(&self) -> (u64, Self) {
     let (i, r) = self.next_i64();
     (if i < 0 { -(i + 1) as u64 } else { i as u64 }, r)
   }
 
+  /// `next_i32` generates a tuple of `i32` and `Self`.<br/>
+  /// `next_i32`は`i32`と`Self`のタプルを生成します。
   fn next_i32(&self) -> (i32, Self);
 
+  /// `next_u32` generates a tuple of `u32` and `Self`.<br/>
+  /// `next_u32`は`u32`と`Self`のタプルを生成します。
   fn next_u32(&self) -> (u32, Self) {
     let (i, r) = self.next_i32();
     (if i < 0 { -(i + 1) as u32 } else { i as u32 }, r)
   }
 
+  /// `next_i16` generates a tuple of `i16` and `Self`.<br/>
+  /// `next_i16`は`i16`と`Self`のタプルを生成します。
   fn next_i16(&self) -> (i16, Self);
 
+  /// `next_u16` generates a tuple of `u16` and `Self`.<br/>
+  /// `next_u16`は`u16`と`Self`のタプルを生成します。
   fn next_u16(&self) -> (u16, Self) {
     let (i, r) = self.next_i16();
     (if i < 0 { -(i + 1) as u16 } else { i as u16 }, r)
   }
 
+  /// `next_i8` generates a tuple of `i8` and `Self`.<br/>
+  /// `next_i8`は`i8`と`Self`のタプルを生成します。
   fn next_i8(&self) -> (i8, Self);
 
+  /// `next_u8` generates a tuple of `u8` and `Self`.<br/>
+  /// `next_u8`は`u8`と`Self`のタプルを生成します。
   fn next_u8(&self) -> (u8, Self) {
     let (i, r) = self.next_i8();
     (if i < 0 { -(i + 1) as u8 } else { i as u8 }, r)
   }
 
+  /// `next_f64` generates a tuple of `f64` and `Self`.<br/>
+  /// `next_f64`は`f64`と`Self`のタプルを生成します。
   fn next_f64(&self) -> (f64, Self) {
     let (i, r) = self.next_i64();
     (i as f64 / (i64::MAX as f64 + 1.0f64), r)
   }
 
+  /// `next_f32` generates a tuple of `f32` and `Self`.<br/>
+  /// `next_f32`は`f32`と`Self`のタプルを生成します。
   fn next_f32(&self) -> (f32, Self) {
     let (i, r) = self.next_i32();
     (i as f32 / (i32::MAX as f32 + 1.0f32), r)
   }
 
+  /// `next_bool` generates a tuple of `bool` and `Self`.<br/>
+  /// `next_bool`は`bool`と`Self`のタプルを生成します。
   fn next_bool(&self) -> (bool, Self) {
     let (i, r) = self.next_i32();
     ((i % 2) != 0, r)
   }
 }
 
+/// `RandGen` is a trait to generate random values.<br/>
+/// `RandGen`はランダムな値を生成するためのトレイトです。
 pub trait RandGen<T: NextRandValue>
 where
   Self: Sized, {
+  /// `rnd_gen` generates a tuple of `Self` and `T`.<br/>
+  /// `rnd_gen`は`Self`と`T`のタプルを生成します。
   fn rnd_gen(rng: T) -> (Self, T);
 }
 
