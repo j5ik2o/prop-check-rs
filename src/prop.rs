@@ -161,9 +161,16 @@ where
   }
 }
 
-/// Represents the function to evaluate the properties by using Gens.<br/>
-/// Gensを利用してプロパティを評価する関数を表す。
-pub fn for_all_gen_for_size<A, GF, F, FF>(gf: GF, mut f: FF) -> Prop
+/// サイズを与えたGenを利用してプロパティを評価するため関数を実行するPropを返す
+/// Returns a Prop that executes a function to evaluate properties using Gen with size.
+///
+/// # Arguments
+/// - `gf` - The function to create a Gen with size.
+/// - `f` - The function to evaluate the properties.
+///
+/// # Returns
+/// - `Prop` - The new Prop.
+pub fn for_all_gen_for_size<A, GF, F, FF>(gf: GF, mut test: FF) -> Prop
 where
   GF: Fn(u32) -> Gen<A> + 'static,
   F: FnMut(A) -> bool + 'static,
@@ -173,7 +180,7 @@ where
     run_f: Rc::new(RefCell::new(move |max, n, rng| {
       let cases_per_size = n / max;
       let props = itertools::iterate(0, |i| *i + 1)
-        .map(|i| for_all_gen(gf(i), f()))
+        .map(|i| for_all_gen(gf(i), test()))
         .take(max as usize)
         .collect::<Vec<_>>();
       let p = props
@@ -186,8 +193,8 @@ where
   }
 }
 
-/// Represents the function to evaluate the properties by using Gens.<br/>
-/// Gensを利用してプロパティを評価する関数を表す。
+/// Returns a Prop that executes a function to evaluate properties using Gen.<br/>
+/// Genを利用してプロパティを評価するため関数を実行するPropを返す
 ///
 /// # Arguments
 /// - `g` - The Gen.
