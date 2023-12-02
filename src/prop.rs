@@ -43,6 +43,12 @@ pub enum PropResult {
 impl PropResult {
   /// The `map` method can change the number of test cases.<br/>
   /// mapメソッドはテストケースの数を変更することができる.
+  ///
+  /// # Arguments
+  /// - `f` - The function to change the number of test cases.
+  ///
+  /// # Returns
+  /// - `PropResult` - The new PropResult.
   pub fn map<F>(self, f: F) -> PropResult
   where
     F: FnOnce(u32) -> u32, {
@@ -57,6 +63,12 @@ impl PropResult {
 
   /// The `flat_map` method can change the number of test cases.<br/>
   /// flat_mapメソッドはテストケースの数を変更することができる.
+  ///
+  /// # Arguments
+  /// - `f` - The function to change the number of test cases.
+  ///
+  /// # Returns
+  /// - `PropResult` - The new PropResult.
   pub fn flat_map<F>(self, f: F) -> PropResult
   where
     F: FnOnce(Option<u32>) -> PropResult, {
@@ -69,6 +81,9 @@ impl PropResult {
 
   /// The `to_result` method can convert the PropResult to Result.<br/>
   /// to_resultメソッドはPropResultをResultに変換することができる.
+  ///
+  /// # Returns
+  /// - `Result<String>` - The result of the PropResult.
   pub fn to_result(self) -> Result<String> {
     match self {
       p @ PropResult::Passed { .. } => Ok(p.message()),
@@ -77,8 +92,11 @@ impl PropResult {
     }
   }
 
-  /// The `to_result_unit` method can convert the PropResult to Result.<br/>
+  /// The `to_result_unit` method can convert the PropResult to Result with the message.<br/>
   /// to_result_unitメソッドはPropResultをResultに変換することができる.
+  ///
+  /// # Returns
+  /// - `Result<()>` - The result without the message of the PropResult
   pub fn to_result_unit(self) -> Result<()> {
     self
       .to_result()
@@ -94,6 +112,9 @@ impl PropResult {
 
   /// The `message` method can return the message of the PropResult.<br/>
   /// messageメソッドはPropResultのメッセージを返すことができる.
+  ///
+  /// # Returns
+  /// - `String` - The message of the PropResult.
   pub fn message(&self) -> String {
     match self {
       PropResult::Passed { test_cases } => format!("OK, passed {} tests", test_cases),

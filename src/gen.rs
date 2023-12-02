@@ -248,10 +248,7 @@ impl Gens {
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i32.<br/>
   /// i32型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
   pub fn choose_i32(min: i32, max: i32) -> Gen<i32> {
-    Gen {
-      sample: State::<RNG, i32>::new(move |rng: RNG| rng.next_i32()),
-    }
-    .map(move |n| min + n % (max - min + 1))
+    Gen::<i32>::new(State::<RNG, i32>::new(move |rng: RNG| rng.next_i32())).map(move |n| min + n % (max - min + 1))
   }
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u32.<br/>
