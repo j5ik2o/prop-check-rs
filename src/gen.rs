@@ -406,8 +406,14 @@ impl<A: Clone + 'static> Gen<A> {
   }
 }
 
+/// Generator with size information.<br/>
+/// サイズ情報を持つジェネレータ。
 pub enum SGen<A> {
+  /// Generator with size information.<br/>
+  /// サイズ情報を持つジェネレータ。
   Sized(Rc<RefCell<dyn Fn(u32) -> Gen<A>>>),
+  /// Generator without size information.<br/>
+  /// サイズ情報を持たないジェネレータ。
   Unsized(Gen<A>),
 }
 
@@ -421,16 +427,22 @@ impl<A: Clone + 'static> Clone for SGen<A> {
 }
 
 impl<A: Clone + 'static> SGen<A> {
+  /// Generates a Gen with size information.<br/>
+  /// サイズ情報を持つGenを生成します。
   pub fn of_sized<F>(f: F) -> SGen<A>
   where
     F: Fn(u32) -> Gen<A> + 'static, {
     SGen::Sized(Rc::new(RefCell::new(f)))
   }
 
+  /// Generates a Gen without size information.<br/>
+  /// サイズ情報を持たないGenを生成します。
   pub fn of_unsized(gen: Gen<A>) -> SGen<A> {
     SGen::Unsized(gen)
   }
 
+  /// Evaluates expressions held by the Gen and generates values.<br/>
+  /// SGenが保持する式を評価しGenを生成します。
   pub fn run(&self, i: Option<u32>) -> Gen<A> {
     match self {
       SGen::Sized(f) => {
@@ -507,9 +519,9 @@ mod tests {
     let cloned_map = result.clone();
 
     let gens = [
-      (1, Gens::choose_u32(1, 10)),
-      (3, Gens::choose_u32(50, 100)),
-      (1, Gens::choose_u32(200, 300)),
+      (1, Gens::choose(1, 10)),
+      (3, Gens::choose(50, 100)),
+      (1, Gens::choose(200, 300)),
     ];
     let gen = Gens::frequency(gens);
     let prop = prop::for_all_gen(gen, move |a| {
