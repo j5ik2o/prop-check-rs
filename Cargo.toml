@@ -1,6 +1,6 @@
 [package]
 name = "prop-check-rs"
-version = "0.0.450"
+version = "0.0.451"
 authors = ["Junichi Kato <j5ik2o@gmail.com>"]
 description = "A Property-based testing Library in Rust"
 repository="https://github.com/j5ik2o/prop-check-rs"
