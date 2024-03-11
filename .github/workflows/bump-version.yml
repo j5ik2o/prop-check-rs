@@ -33,7 +33,7 @@ jobs:
         echo "::set-output name=count::$COUNT"
     - name: Get the next version
       id: dry_run_tag_version
-      uses: mathieudutour/github-tag-action@v6.1
+      uses: mathieudutour/github-tag-action@v6.2
       with:
         github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         default_bump: patch
@@ -66,7 +66,7 @@ jobs:
       if: steps.changes.outputs.count > 0
     - name: Bump version and push tag
       id: tag_version
-      uses: mathieudutour/github-tag-action@v6.1
+      uses: mathieudutour/github-tag-action@v6.2
       with:
         commit_sha: ${{ steps.git_commit_push.outputs.commit_sha }}
         github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
