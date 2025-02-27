@@ -612,9 +612,11 @@ mod tests {
     init();
     let rng = new_rng();
     let mut int_fn = RNG::int_value();
+    // int_fnをクローンして使用
+    let int_fn_clone = int_fn.clone();
     let mut map_fn = RNG::map(int_fn, |x| x * 2);
     let (value, _) = map_fn(rng.clone());
-    let (original, _) = int_fn(rng);
+    let (original, _) = int_fn_clone(rng);
     assert_eq!(value, original * 2);
   }
 
