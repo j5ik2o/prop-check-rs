@@ -549,21 +549,22 @@ impl Gens {
       sample: State::<RNG, f64>::new(move |rng: RNG| rng.next_f64()),
     }
   }
-/// Generates a Gen that produces random f32 values.
-///
-/// # Returns
-/// * A `Gen<f32>` that generates random 32-bit floating point numbers
-///
-/// # Examples
-/// ```
-/// use prop_check_rs::gen::Gens;
-/// let gen = Gens::one_f32();  // Generates random f32 values
-/// ```
-pub fn one_f32() -> Gen<f32> {
-  Gen {
-    sample: State::<RNG, f32>::new(move |rng: RNG| rng.next_f32()),
+
+  /// Generates a Gen that produces random f32 values.
+  ///
+  /// # Returns
+  /// * A `Gen<f32>` that generates random 32-bit floating point numbers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_f32();  // Generates random f32 values
+  /// ```
+  pub fn one_f32() -> Gen<f32> {
+    Gen {
+      sample: State::<RNG, f32>::new(move |rng: RNG| rng.next_f32()),
+    }
   }
-}
 
   /// Generates a Gen that produces values by randomly selecting from other Gens.
   ///
@@ -671,10 +672,10 @@ pub fn one_f32() -> Gen<f32> {
     if min > max {
       panic!("Invalid range: min > max");
     }
-    
+
     // 範囲の大きさを計算
     let range = max - min + 1;
-    
+
     // オーバーフローを防ぐために絶対値を使用
     Gen {
       sample: State::<RNG, i64>::new(move |rng: RNG| {
@@ -710,10 +711,10 @@ pub fn one_f32() -> Gen<f32> {
     if min > max {
       panic!("Invalid range: min > max");
     }
-    
+
     // 範囲の大きさを計算
     let range = max - min + 1;
-    
+
     // オーバーフローを防ぐために絶対値を使用
     Gen {
       sample: State::<RNG, i32>::new(move |rng: RNG| {
