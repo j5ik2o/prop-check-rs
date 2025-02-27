@@ -679,7 +679,7 @@ mod tests {
     init();
     let rng = new_rng();
     let mut int_fn = RNG::int_value();
-    let flat_map_fn = RNG::flat_map(int_fn, |i| RNG::unit(i * 2));
+    let mut flat_map_fn = RNG::flat_map(int_fn, |i| RNG::unit(i * 2));
     let (value, _) = flat_map_fn(rng);
     assert!(value % 2 == 0); // 2の倍数であることを確認
   }
