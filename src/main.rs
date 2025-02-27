@@ -25,16 +25,12 @@ const COUNT: u32 = 100000000;
 pub fn generate_random_ints(count: u32) -> (u32, i32, i32) {
   // Create a new random number generator
   let rng: RNG = RNG::new();
-  
+
   // Generate COUNT random i32 values
   let (rands, _) = rng.i32s(count);
-  
+
   // Return the count, first value, and last value
-  (
-    count,
-    *rands.get(0).unwrap(),
-    *rands.get(rands.len() - 1).unwrap()
-  )
+  (count, *rands.get(0).unwrap(), *rands.get(rands.len() - 1).unwrap())
 }
 
 /// Generates a large number of random i32 values and prints the first and last.
@@ -66,10 +62,10 @@ mod tests {
     // 小さい値でテスト
     let count = 100;
     let (result_count, first, last) = generate_random_ints(count);
-    
+
     // カウントが正しいことを確認
     assert_eq!(result_count, count);
-    
+
     // 値が生成されていることを確認
     assert!(first >= i32::MIN && first <= i32::MAX);
     assert!(last >= i32::MIN && last <= i32::MAX);

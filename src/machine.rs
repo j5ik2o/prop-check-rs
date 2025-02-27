@@ -62,11 +62,11 @@ impl Machine {
           // Inserting a coin into an unlocked machine does nothing
           // ロックされていないマシンにコインを入れても何も起こらない
           // (Coin, Machine { locked: false, .. }) => s.clone(),
-          
+
           // Turning the knob on a locked machine does nothing
           // ロックされたマシンのノブを回しても何も起こらない
           // (Turn, Machine { locked: true, .. }) => s.clone(),
-          
+
           // Inserting a coin into a locked machine unlocks it if there are candies
           // ロックされたマシンにコインを入れると、キャンディがある場合はロックが解除される
           (
@@ -81,7 +81,7 @@ impl Machine {
             candies: candy,
             coins: coin + 1,
           },
-          
+
           // Turning the knob on an unlocked machine dispenses a candy and locks the machine
           // ロックされていないマシンのノブを回すと、キャンディが出てマシンがロックされる
           (
@@ -96,7 +96,7 @@ impl Machine {
             candies: candy - 1,
             coins: coin,
           },
-          
+
           // Any other action does nothing
           // その他のアクションは何も起こらない
           (_, Machine { .. }) => s.clone(),

@@ -358,10 +358,10 @@ impl Gens {
     if min > max {
       panic!("Invalid range: min > max");
     }
-    
+
     // 範囲の大きさを計算
     let range = max - min + 1;
-    
+
     // オーバーフローを防ぐために絶対値を使用
     Gen {
       sample: State::<RNG, i64>::new(move |rng: RNG| {
@@ -389,10 +389,10 @@ impl Gens {
     if min > max {
       panic!("Invalid range: min > max");
     }
-    
+
     // 範囲の大きさを計算
     let range = max - min + 1;
-    
+
     // オーバーフローを防ぐために絶対値を使用
     Gen {
       sample: State::<RNG, i32>::new(move |rng: RNG| {

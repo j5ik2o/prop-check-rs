@@ -423,7 +423,7 @@ mod tests {
     let rng = new_rng();
     let (value, new_rng) = rng.next_i64();
     assert!(value >= i64::MIN && value <= i64::MAX);
-    
+
     // 新しいRNGインスタンスが返されることを確認
     // 内部状態が変わっていることを確認するため、別の方法でチェック
     let (value1, _) = rng.next_i32();
@@ -517,7 +517,7 @@ mod tests {
     init();
     let rng1 = new_rng().with_seed(42);
     let rng2 = new_rng().with_seed(42);
-    
+
     // 同じシードで生成した値が同じであることを確認
     let (v1, _) = rng1.next_i32();
     let (v2, _) = rng2.next_i32();
@@ -559,7 +559,7 @@ mod tests {
     let count = 100;
     let (values, _) = rng.i32s(count);
     assert_eq!(values.len(), count as usize);
-    
+
     // すべての値が有効な範囲内にあることを確認
     for value in values {
       assert!(value >= i32::MIN && value <= i32::MAX);
@@ -597,11 +597,7 @@ mod tests {
   fn test_sequence() {
     init();
     let rng = new_rng();
-    let mut fns = vec![
-      RNG::unit(1),
-      RNG::unit(2),
-      RNG::unit(3),
-    ];
+    let mut fns = vec![RNG::unit(1), RNG::unit(2), RNG::unit(3)];
     let mut sequence_fn = RNG::sequence(fns);
     let (values, _) = sequence_fn(rng);
     assert_eq!(values, vec![1, 2, 3]);
@@ -629,18 +625,18 @@ mod tests {
   fn test_map() {
     init();
     let rng = new_rng();
-    
+
     // 単一のRNG状態から値を生成
     let mut int_fn = RNG::int_value();
     let (original, rng2) = int_fn(rng);
-    
+
     // 同じ値を使用して変換関数をテスト
     let mapped_value = original / 2;
-    
+
     // map関数をテスト
     let mut map_fn = RNG::map(RNG::unit(original), |x| x / 2);
     let (value, _) = map_fn(rng2);
-    
+
     // 結果を検証
     assert_eq!(value, mapped_value);
   }
