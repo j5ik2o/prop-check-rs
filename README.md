@@ -1,35 +1,248 @@
 # prop-check-rs
 
-A Rust crate for property-based testing.
+prop-check-rs is a property-based testing library written in Rust. It leverages functional programming concepts to efficiently generate and validate test data.
+
+*Read this in other languages: [日本語](README.ja.md)*
 
 [![Workflow Status](https://github.com/j5ik2o/prop-check-rs/workflows/ci/badge.svg)](https://github.com/j5ik2o/prop-check-rs/actions?query=workflow%3A%22ci%22)
 [![crates.io](https://img.shields.io/crates/v/prop-check-rs.svg)](https://crates.io/crates/prop-check-rs)
 [![docs.rs](https://docs.rs/prop-check-rs/badge.svg)](https://docs.rs/prop-check-rs)
 [![tokei](https://tokei.rs/b1/github/j5ik2o/prop-check-rs)](https://github.com/XAMPPRocky/tokei)
 
-## Install to Cargo.toml
+## What is Property-Based Testing?
 
-Add this to your `Cargo.toml`:
+Property-based testing is a testing methodology where instead of testing specific input values, you define properties that your program should satisfy and then verify these properties against a large number of randomly generated inputs. This approach helps discover edge cases that developers might not have anticipated.
+
+## Features
+
+- Rich generators: Easily generate test data of various types
+- Functional programming style: Composable API utilizing monads
+- State-based testing: Support for state machine simulation
+- Advanced customization: Define your own generators and properties
+
+## Installation
+
+Add the following to your Cargo.toml:
 
 ```toml
 [dependencies]
-prop-check-rs = "<<version>>"
+prop-check-rs = "0.0.862"
 ```
 
-## Usage
+## Basic Usage
 
-### Choose one value from a list
+### 1. Simple Property Test
+
+Here's an example testing a property about list length:
 
 ```rust
+use prop_check_rs::gen::Gens;
+use prop_check_rs::prop::{for_all_gen, test_with_prop};
+use prop_check_rs::rng::RNG;
+use anyhow::Result;
+
+#[test]
+fn test_list_length_property() -> Result<()> {
+    // Generator for a list of integers from 0 to 100
+    let gen = Gens::list_of_n(10, Gens::choose_i32(0, 100));
+    
+    // Property: The list length is always 10
+    let prop = for_all_gen(gen, |list| {
+        list.len() == 10
+    });
+    
+    // Test the property (max size 1, 100 test cases)
+    test_with_prop(prop, 1, 100, RNG::new())
+}
+```
+
+### 2. Choosing Values
+
+```rust
+use prop_check_rs::gen::Gens;
+use prop_check_rs::prop::{for_all_gen, test_with_prop};
+use prop_check_rs::rng::RNG;
+use anyhow::Result;
+
 #[test]
 fn test_one_of() -> Result<()> {
-  let gen = Gens::one_of_values(['a', 'b', 'c', 'x', 'y', 'z']);
-  let prop = for_all_gen(gen, move |value| {
-      log::info!("value = {}", value);
-      true
-  });
-  test_with_prop(prop, 1, 100, new_rng())
+    // Generator that selects one of the specified characters
+    let gen = Gens::one_of_values(['a', 'b', 'c', 'x', 'y', 'z']);
+    
+    // Property: The selected character is always one of the specified characters
+    let prop = for_all_gen(gen, move |value| {
+        log::info!("value = {}", value);
+        ['a', 'b', 'c', 'x', 'y', 'z'].contains(&value)
+    });
+    
+    test_with_prop(prop, 1, 100, RNG::new())
 }
+```
+
+### 3. Using Sized Generators
+
+```rust
+use prop_check_rs::gen::Gens;
+use prop_check_rs::prop::{for_all_gen_for_size, test_with_prop};
+use prop_check_rs::rng::RNG;
+use anyhow::Result;
+
+#[test]
+fn test_sized_generator() -> Result<()> {
+    let gen = Gens::one_of_values(['a', 'b', 'c', 'x', 'y', 'z']);
+    
+    // Generate lists based on size
+    let prop = for_all_gen_for_size(
+        move |size| Gens::list_of_n(size as usize, gen.clone()),
+        move || {
+            move |list| {
+                // Verify that the list length matches the size
+                log::info!("list = {:?}", list);
+                true
+            }
+        },
+    );
+    
+    // Max size 10, 100 test cases
+    test_with_prop(prop, 10, 100, RNG::new())
+}
+```
+
+## Key Components
+
+### Gen<A>
+
+`Gen<A>` is a generator for values of type `A`. It provides methods like `map`, `flat_map`, and `and_then` to create new generators from existing ones.
+
+```rust
+// Generator for integers from 1 to 100
+let int_gen = Gens::choose_i32(1, 100);
+
+// Generator that converts integers to strings
+let string_gen = int_gen.map(|n| n.to_string());
+```
+
+### Gens
+
+`Gens` is a factory for creating various generators. It provides generators for:
+
+- Basic types (integers, floating-point numbers, characters, booleans, etc.)
+- Lists
+- Optional values
+- Choosing one from multiple options
+- Probability-based selection
+
+```rust
+// Generators for basic types
+let int_gen = Gens::one_i32();
+let float_gen = Gens::one_f64();
+let bool_gen = Gens::one_bool();
+
+// Generator with a specified range
+let range_gen = Gens::choose_i32(1, 100);
+
+// Generator for lists
+let list_gen = Gens::list_of_n(10, range_gen);
+
+// Generator that chooses one from multiple options
+let choice_gen = Gens::one_of_values(["apple", "banana", "orange"]);
+
+// Generator based on probabilities
+let weighted_gen = Gens::frequency_values([(1, "rare"), (5, "common"), (2, "uncommon")]);
+```
+
+### Prop
+
+`Prop` is a structure representing a property. A property defines a condition to verify against values generated by a generator.
+
+```rust
+// Property verifying that integers are always positive
+let positive_prop = for_all_gen(Gens::choose_i32(1, 100), |n| n > 0);
+
+// Combining multiple properties
+let combined_prop = positive_prop.and(another_prop);
+```
+
+### State<S, A>
+
+`State<S, A>` is a monad representing a computation with state `S` that produces a value of type `A`. This allows composing computations while maintaining state.
+
+```rust
+// Get the state
+let get_state = State::<i32, i32>::get();
+
+// Set the state
+let set_state = State::<i32, ()>::set(42);
+
+// Modify the state
+let modify_state = State::<i32, ()>::modify(|s| s + 1);
+
+// Compose stateful computations
+let computation = get_state.flat_map(|s| {
+    if s > 0 {
+        State::pure(s * 2)
+    } else {
+        State::pure(0)
+    }
+});
+```
+
+## Advanced Usage Examples
+
+### Testing State Machines
+
+The `machine.rs` module provides an example of simulating a state machine. Here's an example of a candy vending machine simulation:
+
+```rust
+// Input
+enum Input {
+    Coin,
+    Turn,
+}
+
+// State machine
+struct Machine {
+    locked: bool,
+    candies: i32,
+    coins: i32,
+}
+
+// Simulating the state machine
+let inputs = vec![Input::Coin, Input::Turn, Input::Coin, Input::Turn];
+let simulation = Machine::simulate_machine(inputs);
+let result = simulation.run(Machine { locked: true, candies: 5, coins: 10 });
+```
+
+### Creating Custom Generators
+
+You can create your own generators to generate domain-specific test data:
+
+```rust
+// Generator for valid email addresses
+fn email_gen() -> Gen<String> {
+    let username_gen = Gens::list_of_n(8, Gens::choose_char('a', 'z'))
+        .map(|chars| chars.into_iter().collect::<String>());
+    
+    let domain_gen = Gens::one_of_values(["example.com", "test.org", "mail.net"]);
+    
+    username_gen.and_then(domain_gen, |username, domain| {
+        format!("{}@{}", username, domain)
+    })
+}
+
+// Usage example
+let prop = for_all_gen(email_gen(), |email| {
+    // Email validation logic
+    email.contains('@')
+});
+```
+
+## Benchmarks
+
+prop-check-rs includes optimizations for efficiently generating large amounts of test data. To run the benchmarks:
+
+```bash
+cargo bench
 ```
 
 ## License
