@@ -4,7 +4,6 @@ use crate::rng::RNG;
 use anyhow::*;
 use std::cell::RefCell;
 use std::fmt::Debug;
-use std::iter::FromFn;
 use std::rc::Rc;
 
 pub type MaxSize = u32;

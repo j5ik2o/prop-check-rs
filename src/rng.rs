@@ -125,22 +125,22 @@ impl Default for RNG {
 
 impl NextRandValue for RNG {
     fn next_i64(&self) -> (i64, Self) {
-        let n = { self.rng.borrow_mut().gen::<i64>() };
+        let n = { self.rng.borrow_mut().random::<i64>() };
         (n, Self { rng: Rc::clone(&self.rng) })
     }
 
     fn next_i32(&self) -> (i32, Self) {
-        let n = { self.rng.borrow_mut().gen::<i32>() };
+        let n = { self.rng.borrow_mut().random::<i32>() };
         (n, Self { rng: Rc::clone(&self.rng) })
     }
 
     fn next_i16(&self) -> (i16, Self) {
-        let n = { self.rng.borrow_mut().gen::<i16>() };
+        let n = { self.rng.borrow_mut().random::<i16>() };
         (n, Self { rng: Rc::clone(&self.rng) })
     }
 
     fn next_i8(&self) -> (i8, Self) {
-        let n = { self.rng.borrow_mut().gen::<i8>() };
+        let n = { self.rng.borrow_mut().random::<i8>() };
         (n, Self { rng: Rc::clone(&self.rng) })
     }
 }
@@ -185,11 +185,11 @@ impl RNG {
         ((d1, d2, d3), r3)
     }
 
-    /// `i32s` generates a vector of `i32`.
-    /// `i32s`は`i32`のベクタを生成します。
+    /// `i32s` generates a vector of `i32` with pre-allocated capacity.
+    /// `i32s`は事前に容量を確保して`i32`のベクタを生成します。
     pub fn i32s(self, count: u32) -> (Vec<i32>, Self) {
         let mut index = count;
-        let mut acc = vec![];
+        let mut acc = Vec::with_capacity(count as usize);
         let mut current_rng = self;
         while index > 0 {
             let (x, new_rng) = current_rng.next_i32();
@@ -209,19 +209,22 @@ impl RNG {
         Box::new(move |rng: RNG| (a.clone(), rng))
     }
 
-    /// `sequence` generates a function that returns a tuple of `Vec<A>` and `RNG`.
-    /// `sequence`は`Vec<A>`と`RNG`のタプルを返す関数を生成します。
+    /// `sequence` generates a function that returns a tuple of `Vec<A>` and `RNG`,
+    /// pre-allocating capacity based on the number of functions.
+    /// `sequence`は事前に容量を確保して`Vec<A>`と`RNG`のタプルを返す関数を生成します。
     pub fn sequence<A, F>(fs: Vec<F>) -> Box<dyn FnMut(RNG) -> (Vec<A>, RNG)>
     where
         A: Clone + 'static,
         F: FnMut(RNG) -> (A, RNG) + 'static,
     {
-        let unit = Self::unit(Vec::<A>::new());
+        let cap = fs.len();
+        let unit: Box<dyn FnMut(RNG) -> (Vec<A>, RNG)> = Box::new(move |rng: RNG| (Vec::<A>::with_capacity(cap), rng));
         let result = fs.into_iter().fold(unit, |acc, e| {
-            Self::map2(acc, e, |mut a, b| {
+            let map_result: Box<dyn FnMut(RNG) -> (Vec<A>, RNG)> = Self::map2(acc, e, |mut a, b| {
                 a.push(b);
                 a
-            })
+            });
+            map_result
         });
         result
     }
