@@ -11,27 +11,48 @@ use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::rc::Rc;
 
-/// Factory responsibility for generating Gens.<br/>
-/// Genを生成するためのファクトリ責務。
+/// Factory responsibility for generating Gens.
 pub struct Gens;
 
 impl Gens {
-  /// Generates a Gen that returns `()`.<br/>
-  /// `()`を返すGenを生成します。
+  /// Generates a Gen that returns `()`.
+  ///
+  /// # Returns
+  /// * A `Gen<()>` that generates the unit value
   pub fn unit() -> Gen<()> {
     Self::pure(())
   }
 
-  /// Generates a Gen that returns a value.<br/>
-  /// 値を返すGenを生成します。
+  /// Generates a Gen that returns a constant value.
+  ///
+  /// # Arguments
+  /// * `value` - The value to be wrapped in a Gen
+  ///
+  /// # Returns
+  /// * A `Gen<B>` that always generates the provided value
   pub fn pure<B>(value: B) -> Gen<B>
   where
     B: Clone + 'static, {
     Gen::<B>::new(State::value(value))
   }
 
-  /// Generates a Gen that returns a value from a function.<br/>
-  /// 関数が返す値を返すGenを生成します。
+  /// Generates a Gen that returns a value from a lazily evaluated function.
+  ///
+  /// # Arguments
+  /// * `f` - A closure that produces the value when called
+  ///
+  /// # Returns
+  /// * A `Gen<B>` that generates the value by calling the provided function
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let expensive_computation = || {
+  ///     // some expensive computation
+  ///     42
+  /// };
+  /// let gen = Gens::pure_lazy(expensive_computation);
+  /// ```
   pub fn pure_lazy<B, F>(f: F) -> Gen<B>
   where
     F: Fn() -> B + 'static,
@@ -39,24 +60,66 @@ impl Gens {
     Self::pure(()).map(move |_| f())
   }
 
-  /// Generates a Gen that wraps the value of Gen into Option.<br/>
-  /// Genの値をOptionにラップするGenを生成します。
+  /// Generates a Gen that wraps the value of another Gen in Some.
+  ///
+  /// # Arguments
+  /// * `gen` - The Gen whose values will be wrapped in Some
+  ///
+  /// # Returns
+  /// * A `Gen<Option<B>>` that always generates Some containing the value from the input Gen
+  ///
+  /// # Type Parameters
+  /// * `B` - The type of value to be wrapped in Some, must implement Clone and have a 'static lifetime
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let number_gen = Gens::choose(1, 10);
+  /// let some_number_gen = Gens::some(number_gen);  // Generates Some(1)..Some(10)
+  /// ```
   pub fn some<B>(gen: Gen<B>) -> Gen<Option<B>>
   where
     B: Clone + 'static, {
     gen.map(Some)
   }
 
-  /// Generates a Gen that returns Some or None based on the value of Gen.<br/>
-  /// Genの値を元にSomeもしくはNoneを返すGenを生成します。
+  /// Generates a Gen that returns Some or None based on the value of Gen.
+  /// The probability distribution is 90% for Some and 10% for None.
+  ///
+  /// # Arguments
+  /// * `gen` - The Gen to be wrapped in an Option
+  ///
+  /// # Returns
+  /// * A `Gen<Option<B>>` that generates Some(value) 90% of the time and None 10% of the time
+  ///
+  /// # Type Parameters
+  /// * `B` - The type of value to be generated, must implement Debug, Clone and have a 'static lifetime
   pub fn option<B>(gen: Gen<B>) -> Gen<Option<B>>
   where
     B: Debug + Clone + 'static, {
     Self::frequency([(1, Self::pure(None)), (9, Self::some(gen))])
   }
 
-  /// Generates a Gen that returns Either based on two Gens.<br/>
-  /// 二つのGenを元にEitherを返すGenを生成します。
+  /// Generates a Gen that produces a Result type by combining two Gens.
+  ///
+  /// # Arguments
+  /// * `gt` - The Gen that produces the Ok variant values
+  /// * `ge` - The Gen that produces the Err variant values
+  ///
+  /// # Returns
+  /// * A `Gen<Result<T, E>>` that randomly generates either Ok(T) or Err(E)
+  ///
+  /// # Type Parameters
+  /// * `T` - The success type, must implement Choose, Clone and have a 'static lifetime
+  /// * `E` - The error type, must implement Clone and have a 'static lifetime
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let success_gen = Gens::choose(1, 10);
+  /// let error_gen = Gens::pure("error");
+  /// let result_gen = Gens::either(success_gen, error_gen);
+  /// ```
   pub fn either<T, E>(gt: Gen<T>, ge: Gen<E>) -> Gen<Result<T, E>>
   where
     T: Choose + Clone + 'static,
@@ -64,16 +127,52 @@ impl Gens {
     Self::one_of([gt.map(Ok), ge.map(Err)])
   }
 
-  /// Generates a Gen that produces values according to a specified ratio.<br/>
-  /// 指定の比率によって値を生成するGenを生成します。
+  /// Generates a Gen that produces values according to specified weights.
+  ///
+  /// # Arguments
+  /// * `values` - An iterator of tuples where the first element is the weight (u32) and
+  ///             the second element is the value to be generated. The probability of each
+  ///             value being generated is proportional to its weight.
+  ///
+  /// # Returns
+  /// * A `Gen<B>` that generates values with probabilities determined by their weights
+  ///
+  /// # Panics
+  /// * Panics if all weights are 0
+  /// * Panics if no values are provided
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let weighted_gen = Gens::frequency_values([
+  ///     (2, "common"),    // 2/3 probability
+  ///     (1, "rare"),      // 1/3 probability
+  /// ]);
+  /// ```
   pub fn frequency_values<B>(values: impl IntoIterator<Item = (u32, B)>) -> Gen<B>
   where
     B: Debug + Clone + 'static, {
     Self::frequency(values.into_iter().map(|(n, value)| (n, Gens::pure(value))))
   }
 
-  /// Generates a Gen that produces a value based on the specified ratio and Gen.<br/>
-  /// 指定された比率とGenに基づき値を生成するGenを生成します。
+  /// Generates a Gen that produces values from other Gens according to specified weights.
+  ///
+  /// # Arguments
+  /// * `values` - An iterator of tuples where the first element is the weight (u32) and
+  ///             the second element is another Gen. The probability of each Gen being
+  ///             chosen is proportional to its weight.
+  ///
+  /// # Returns
+  /// * A `Gen<B>` that generates values by selecting and running other Gens based on their weights
+  ///
+  /// # Panics
+  /// * Panics if all weights are 0
+  /// * Panics if no values are provided
+  ///
+  /// # Implementation Notes
+  /// * Uses a BTreeMap for efficient weighted selection
+  /// * Filters out entries with zero weight
+  /// * Maintains cumulative weights for probability calculations
   pub fn frequency<B>(values: impl IntoIterator<Item = (u32, Gen<B>)>) -> Gen<B>
   where
     B: Debug + Clone + 'static, {
@@ -108,10 +207,27 @@ impl Gens {
     })
   }
 
-  /// Generates a Gen whose elements are the values generated by the specified number of Gen.<br/>
-  /// 指定した個数のGenによって生成された値を要素とするGenを生成します。
+  /// Generates a Gen that produces a vector of n values generated by another Gen.
   ///
-  /// This implementation uses lazy evaluation for better performance.
+  /// # Arguments
+  /// * `n` - The number of values to generate
+  /// * `gen` - The Gen used to generate each value
+  ///
+  /// # Returns
+  /// * A `Gen<Vec<B>>` that generates a vector containing n values
+  ///
+  /// # Performance
+  /// * Uses lazy evaluation internally for better memory efficiency
+  /// * For large n (>= 1000), consider using `list_of_n_chunked` or `list_of_n_chunked_optimal`
+  ///   which may provide better performance through chunk-based processing
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let number_gen = Gens::choose(1, 100);
+  /// let numbers_gen = Gens::list_of_n(5, number_gen);
+  /// // Could generate vec![42, 17, 89, 3, 71]
+  /// ```
   pub fn list_of_n<B>(n: usize, gen: Gen<B>) -> Gen<Vec<B>>
   where
     B: Clone + 'static, {
@@ -119,19 +235,40 @@ impl Gens {
   }
 
   /// Generates a Gen whose elements are the values generated by the specified number of Gen,
-  /// using the optimal chunk size based on benchmarks.<br/>
-  /// 指定した個数のGenによって生成された値を要素とするGenを生成します。
-  /// ベンチマークに基づいた最適なチャンクサイズを使用します。
+  /// using the optimal chunk size based on benchmarks.
   pub fn list_of_n_chunked_optimal<B>(n: usize, gen: Gen<B>) -> Gen<Vec<B>>
   where
     B: Clone + 'static, {
     Self::list_of_n_chunked(n, usize::MAX, gen)
   }
 
-  /// Generates a Gen whose elements are the values generated by the specified number of Gen,
-  /// processing them in chunks of the specified size.<br/>
-  /// 指定した個数のGenによって生成された値を要素とするGenを生成します。
-  /// 指定したチャンクサイズで処理します。
+  /// Generates a Gen that produces a vector of values using chunk-based processing for better performance.
+  ///
+  /// # Arguments
+  /// * `n` - The number of values to generate
+  /// * `chunk_size` - The size of chunks for batch processing. For optimal performance:
+  ///                  - Use 1000 for large n (>= 1000)
+  ///                  - For smaller n, the provided chunk_size is used as is
+  /// * `gen` - The Gen used to generate each value
+  ///
+  /// # Returns
+  /// * A `Gen<Vec<B>>` that generates a vector containing n values
+  ///
+  /// # Panics
+  /// * Panics if chunk_size is 0
+  ///
+  /// # Performance Notes
+  /// * Processes values in chunks to reduce memory allocation overhead
+  /// * Automatically adjusts chunk size based on total number of elements
+  /// * More efficient than `list_of_n` for large datasets
+  /// * Consider using `list_of_n_chunked_optimal` for automatic chunk size optimization
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let number_gen = Gens::choose(1, 100);
+  /// let numbers_gen = Gens::list_of_n_chunked(1000, 100, number_gen);
+  /// ```
   pub fn list_of_n_chunked<B>(n: usize, chunk_size: usize, gen: Gen<B>) -> Gen<Vec<B>>
   where
     B: Clone + 'static, {
@@ -177,8 +314,28 @@ impl Gens {
     }))
   }
 
-  /// Generates a Gen that lazily produces values using an iterator.<br/>
-  /// イテレータを使用して値を遅延生成するGenを生成します。
+  /// Generates a Gen that produces a vector of values using lazy evaluation.
+  ///
+  /// # Arguments
+  /// * `n` - The number of values to generate
+  /// * `gen` - The Gen used to generate each value
+  ///
+  /// # Returns
+  /// * A `Gen<Vec<B>>` that generates a vector containing n values
+  ///
+  /// # Performance Notes
+  /// * Uses lazy evaluation to generate values one at a time
+  /// * Minimizes memory usage by not pre-allocating all states
+  /// * More memory efficient than eager evaluation for large n
+  /// * May be slower than chunk-based processing for very large datasets
+  /// * Maintains consistent memory usage regardless of n
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let number_gen = Gens::choose(1, 100);
+  /// let numbers_gen = Gens::list_of_n_lazy(5, number_gen);
+  /// ```
   pub fn list_of_n_lazy<B>(n: usize, gen: Gen<B>) -> Gen<Vec<B>>
   where
     B: Clone + 'static, {
@@ -197,108 +354,239 @@ impl Gens {
     }))
   }
 
-  /// Generates a Gen that returns a single value of a certain type.<br/>
-  /// ある型の値を一つ返すGenを生成します。
+  /// Generates a Gen that returns a single value using the One trait.
+  ///
+  /// # Type Parameters
+  /// * `T` - The type that implements the One trait
+  ///
+  /// # Returns
+  /// * A `Gen<T>` that generates values using the One trait implementation
+  ///
+  /// # Implementation Notes
+  /// * Uses the `one()` method from the One trait to generate values
+  /// * Useful for types that have a natural "one" or "unit" value
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let number_gen = Gens::one::<i32>();  // Generates using i32's One implementation
+  /// let bool_gen = Gens::one::<bool>();   // Generates using bool's One implementation
+  /// ```
   pub fn one<T: One>() -> Gen<T> {
     One::one()
   }
 
-  /// Generates a Gen that returns a single value of type i64.<br/>
-  /// i64型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random i64 values.
+  ///
+  /// # Returns
+  /// * A `Gen<i64>` that generates random 64-bit signed integers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_i64();  // Generates random i64 values
+  /// ```
   pub fn one_i64() -> Gen<i64> {
     Gen {
       sample: State::<RNG, i64>::new(move |rng: RNG| rng.next_i64()),
     }
   }
 
-  /// Generates a Gen that returns a single value of type u64.<br/>
-  /// u64型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random u64 values.
+  ///
+  /// # Returns
+  /// * A `Gen<u64>` that generates random 64-bit unsigned integers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_u64();  // Generates random u64 values
+  /// ```
   pub fn one_u64() -> Gen<u64> {
     Gen {
       sample: State::<RNG, u64>::new(move |rng: RNG| rng.next_u64()),
     }
   }
 
-  /// Generates a Gen that returns a single value of type i32.<br/>
-  /// i32型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random i32 values.
+  ///
+  /// # Returns
+  /// * A `Gen<i32>` that generates random 32-bit signed integers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_i32();  // Generates random i32 values
+  /// ```
   pub fn one_i32() -> Gen<i32> {
     Gen {
       sample: State::<RNG, i32>::new(move |rng: RNG| rng.next_i32()),
     }
   }
 
-  /// Generates a Gen that returns a single value of type u32.<br/>
-  /// u32型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random u32 values.
+  ///
+  /// # Returns
+  /// * A `Gen<u32>` that generates random 32-bit unsigned integers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_u32();  // Generates random u32 values
+  /// ```
   pub fn one_u32() -> Gen<u32> {
     Gen {
       sample: State::<RNG, u32>::new(move |rng: RNG| rng.next_u32()),
     }
   }
 
-  /// Generates a Gen that returns a single value of type i16.<br/>
-  /// i16型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random i16 values.
+  ///
+  /// # Returns
+  /// * A `Gen<i16>` that generates random 16-bit signed integers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_i16();  // Generates random i16 values
+  /// ```
   pub fn one_i16() -> Gen<i16> {
     Gen {
       sample: State::<RNG, i16>::new(move |rng: RNG| rng.next_i16()),
     }
   }
 
-  /// Generates a Gen that returns a single value of type u16.<br/>
-  /// u16型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random u16 values.
+  ///
+  /// # Returns
+  /// * A `Gen<u16>` that generates random 16-bit unsigned integers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_u16();  // Generates random u16 values
+  /// ```
   pub fn one_u16() -> Gen<u16> {
     Gen {
       sample: State::<RNG, u16>::new(move |rng: RNG| rng.next_u16()),
     }
   }
 
-  /// Generates a Gen that returns a single value of type i8.<br/>
-  /// i8型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random i8 values.
+  ///
+  /// # Returns
+  /// * A `Gen<i8>` that generates random 8-bit signed integers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_i8();  // Generates random i8 values
+  /// ```
   pub fn one_i8() -> Gen<i8> {
     Gen {
       sample: State::<RNG, i8>::new(move |rng: RNG| rng.next_i8()),
     }
   }
 
-  /// Generates a Gen that returns a single value of type u8.<br/>
-  /// u8型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random u8 values.
+  ///
+  /// # Returns
+  /// * A `Gen<u8>` that generates random 8-bit unsigned integers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_u8();  // Generates random u8 values
+  /// ```
   pub fn one_u8() -> Gen<u8> {
     Gen {
       sample: State::<RNG, u8>::new(move |rng: RNG| rng.next_u8()),
     }
   }
 
-  /// Generates a Gen that returns a single value of type char.<br/>
-  /// char型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random char values.
+  ///
+  /// # Returns
+  /// * A `Gen<char>` that generates random characters
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_char();  // Generates random characters
+  /// ```
   pub fn one_char() -> Gen<char> {
     Self::one_u8().map(|v| v as char)
   }
 
-  /// Generates a Gen that returns a single value of type bool.<br/>
-  /// bool型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random boolean values.
+  ///
+  /// # Returns
+  /// * A `Gen<bool>` that generates random true/false values
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_bool();  // Generates random booleans
+  /// ```
   pub fn one_bool() -> Gen<bool> {
     Gen {
       sample: State::<RNG, bool>::new(|rng: RNG| rng.next_bool()),
     }
   }
 
-  /// Generates a Gen that returns a single value of type f64.<br/>
-  /// f64型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random f64 values.
+  ///
+  /// # Returns
+  /// * A `Gen<f64>` that generates random 64-bit floating point numbers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_f64();  // Generates random f64 values
+  /// ```
   pub fn one_f64() -> Gen<f64> {
     Gen {
       sample: State::<RNG, f64>::new(move |rng: RNG| rng.next_f64()),
     }
   }
 
-  /// Generates a Gen that returns a single value of type f32.<br/>
-  /// f32型の値を一つ返すGenを生成します。
+  /// Generates a Gen that produces random f32 values.
+  ///
+  /// # Returns
+  /// * A `Gen<f32>` that generates random 32-bit floating point numbers
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let gen = Gens::one_f32();  // Generates random f32 values
+  /// ```
   pub fn one_f32() -> Gen<f32> {
     Gen {
       sample: State::<RNG, f32>::new(move |rng: RNG| rng.next_f32()),
     }
   }
 
-  /// Generates a Gen that returns a value selected at random from a specified set of Gen.<br/>
-  /// 指定されたGenの集合からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that produces values by randomly selecting from other Gens.
+  ///
+  /// # Arguments
+  /// * `values` - An iterator of Gens to choose from, with equal probability
+  ///
+  /// # Returns
+  /// * A `Gen<T>` that generates values by randomly selecting and running one of the input Gens
+  ///
+  /// # Type Parameters
+  /// * `T` - The type of value to generate, must implement Choose, Clone and have a 'static lifetime
+  ///
+  /// # Panics
+  /// * Panics if the input iterator is empty
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let small = Gens::choose(1, 10);
+  /// let large = Gens::choose(100, 200);
+  /// let combined = Gens::one_of([small, large]);  // 50% chance of each range
+  /// ```
   pub fn one_of<T: Choose + Clone + 'static>(values: impl IntoIterator<Item = Gen<T>>) -> Gen<T> {
     // 直接Vecに変換
     let vec: Vec<_> = values.into_iter().collect();
@@ -315,8 +603,27 @@ impl Gens {
     })
   }
 
-  /// Generates a Gen that returns one randomly selected value from the specified set of values.<br/>
-  /// 指定された値の集合からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that randomly selects from a set of fixed values.
+  ///
+  /// # Arguments
+  /// * `values` - An iterator of values to choose from, with equal probability
+  ///
+  /// # Returns
+  /// * A `Gen<T>` that generates values by randomly selecting one from the input set
+  ///
+  /// # Type Parameters
+  /// * `T` - The type of value to generate, must implement Choose, Clone and have a 'static lifetime
+  ///
+  /// # Panics
+  /// * Panics if the input iterator is empty
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// // Note: &str doesn't implement Choose trait
+  /// // let colors = Gens::one_of_values(["red", "green", "blue"]);
+  /// let numbers = Gens::one_of_values([1, 10, 100]);  // Equal probability for each number
+  /// ```
   pub fn one_of_values<T: Choose + Clone + 'static>(values: impl IntoIterator<Item = T>) -> Gen<T> {
     // 直接Vecに変換
     let vec: Vec<_> = values.into_iter().collect();
@@ -330,14 +637,12 @@ impl Gens {
     Self::choose(0usize, vec.len() - 1).map(move |idx| vec[idx as usize].clone())
   }
 
-  /// Generates a Gen that returns one randomly selected value from the specified maximum and minimum ranges of generic type.<br/>
-  /// 指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from the specified maximum and minimum ranges of generic type.
   pub fn choose<T: Choose>(min: T, max: T) -> Gen<T> {
     Choose::choose(min, max)
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type char.<br/>
-  /// char型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type char.
   pub fn choose_char(min: char, max: char) -> Gen<char> {
     // 文字コードを使用して範囲を計算
     let min_code = min as u32;
@@ -352,8 +657,17 @@ impl Gens {
     Self::choose_u32(min_code, max_code).map(move |code| std::char::from_u32(code).unwrap_or(min))
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i64.<br/>
-  /// i64型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i64.
+  ///
+  /// # Arguments
+  /// * `min` - The minimum value (inclusive) of the range
+  /// * `max` - The maximum value (inclusive) of the range
+  ///
+  /// # Returns
+  /// * A `Gen<i64>` that generates random i64 values in the range [min, max]
+  ///
+  /// # Panics
+  /// * Panics if `min > max` (invalid range)
   pub fn choose_i64(min: i64, max: i64) -> Gen<i64> {
     if min > max {
       panic!("Invalid range: min > max");
@@ -374,8 +688,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u64.<br/>
-  /// u64型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u64.
   pub fn choose_u64(min: u64, max: u64) -> Gen<u64> {
     Gen {
       sample: State::<RNG, u64>::new(move |rng: RNG| rng.next_u64()),
@@ -383,8 +696,17 @@ impl Gens {
     .map(move |n| min + n % (max - min + 1))
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i32.<br/>
-  /// i32型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i32.
+  ///
+  /// # Arguments
+  /// * `min` - The minimum value (inclusive) of the range
+  /// * `max` - The maximum value (inclusive) of the range
+  ///
+  /// # Returns
+  /// * A `Gen<i32>` that generates random i32 values in the range [min, max]
+  ///
+  /// # Panics
+  /// * Panics if `min > max` (invalid range)
   pub fn choose_i32(min: i32, max: i32) -> Gen<i32> {
     if min > max {
       panic!("Invalid range: min > max");
@@ -405,8 +727,7 @@ impl Gens {
     }
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u32.<br/>
-  /// u32型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u32.
   pub fn choose_u32(min: u32, max: u32) -> Gen<u32> {
     Gen {
       sample: State::<RNG, u32>::new(move |rng: RNG| rng.next_u32()),
@@ -414,8 +735,7 @@ impl Gens {
     .map(move |n| min + n % (max - min + 1))
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i16.<br/>
-  /// i16型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i16.
   pub fn choose_i16(min: i16, max: i16) -> Gen<i16> {
     Gen {
       sample: State::<RNG, i16>::new(move |rng: RNG| rng.next_i16()),
@@ -423,8 +743,7 @@ impl Gens {
     .map(move |n| min + n % (max - min + 1))
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u16.<br/>
-  /// u16型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u16.
   pub fn choose_u16(min: u16, max: u16) -> Gen<u16> {
     Gen {
       sample: State::<RNG, u16>::new(move |rng: RNG| rng.next_u16()),
@@ -432,8 +751,7 @@ impl Gens {
     .map(move |n| min + n % (max - min + 1))
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i8.<br/>
-  /// i8型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i8.
   pub fn choose_i8(min: i8, max: i8) -> Gen<i8> {
     Gen {
       sample: State::<RNG, i8>::new(move |rng: RNG| rng.next_i8()),
@@ -441,8 +759,7 @@ impl Gens {
     .map(move |n| min + n % (max - min + 1))
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u8.<br/>
-  /// u8型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u8.
   pub fn choose_u8(min: u8, max: u8) -> Gen<u8> {
     Gen {
       sample: State::<RNG, u8>::new(move |rng: RNG| rng.next_u8()),
@@ -450,8 +767,17 @@ impl Gens {
     .map(move |n| min + n % (max - min + 1))
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type f64.<br/>
-  /// f64型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type f64.
+  ///
+  /// # Arguments
+  /// * `min` - The minimum value (inclusive) of the range
+  /// * `max` - The maximum value (inclusive) of the range
+  ///
+  /// # Returns
+  /// * A `Gen<f64>` that generates random f64 values in the range [min, max]
+  ///
+  /// # Note
+  /// * The distribution is uniform across the range
   pub fn choose_f64(min: f64, max: f64) -> Gen<f64> {
     Gen {
       sample: State::<RNG, f64>::new(move |rng: RNG| rng.next_f64()),
@@ -459,8 +785,17 @@ impl Gens {
     .map(move |d| min + d * (max - min))
   }
 
-  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type f32.<br/>
-  /// f32型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type f32.
+  ///
+  /// # Arguments
+  /// * `min` - The minimum value (inclusive) of the range
+  /// * `max` - The maximum value (inclusive) of the range
+  ///
+  /// # Returns
+  /// * A `Gen<f32>` that generates random f32 values in the range [min, max]
+  ///
+  /// # Note
+  /// * The distribution is uniform across the range
   pub fn choose_f32(min: f32, max: f32) -> Gen<f32> {
     Gen {
       sample: State::<RNG, f32>::new(move |rng: RNG| rng.next_f32()),
@@ -468,8 +803,28 @@ impl Gens {
     .map(move |d| min + d * (max - min))
   }
 
-  /// Generates a Gen that returns one even number randomly selected from a specified range of values.<br/>
-  /// 指定された値の範囲から偶数をランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns randomly selected even numbers from a specified range.
+  ///
+  /// # Arguments
+  /// * `start` - The inclusive start of the range
+  /// * `stop_exclusive` - The exclusive end of the range
+  ///
+  /// # Type Parameters
+  /// * `T` - A numeric type that implements Choose, Num, Copy, and 'static
+  ///
+  /// # Returns
+  /// * A `Gen<T>` that generates even numbers in the range [start, stop_exclusive)
+  ///
+  /// # Implementation Notes
+  /// * If the start value is odd, the first even number after it will be used
+  /// * If stop_exclusive is odd, stop_exclusive - 1 will be used as the end of the range
+  /// * Maintains uniform distribution over even numbers in the range
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let even_gen = Gens::even(1, 10);  // Generates from {2, 4, 6, 8}
+  /// ```
   pub fn even<T: Choose + Num + Copy + 'static>(start: T, stop_exclusive: T) -> Gen<T> {
     let two = T::one().add(T::one());
     Self::choose(
@@ -483,8 +838,28 @@ impl Gens {
     .map(move |n| if n % two != T::zero() { n + T::one() } else { n })
   }
 
-  /// Generates a Gen that returns one randomly selected odd number from a specified range of values.<br/>
-  /// 指定された値の範囲から奇数をランダムに一つ選択した値を返すGenを生成します。
+  /// Generates a Gen that returns randomly selected odd numbers from a specified range.
+  ///
+  /// # Arguments
+  /// * `start` - The inclusive start of the range
+  /// * `stop_exclusive` - The exclusive end of the range
+  ///
+  /// # Type Parameters
+  /// * `T` - A numeric type that implements Choose, Num, Copy, and 'static
+  ///
+  /// # Returns
+  /// * A `Gen<T>` that generates odd numbers in the range [start, stop_exclusive)
+  ///
+  /// # Implementation Notes
+  /// * If the start value is even, the first odd number after it will be used
+  /// * If stop_exclusive is even, stop_exclusive - 1 will be used as the end of the range
+  /// * Maintains uniform distribution over odd numbers in the range
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let odd_gen = Gens::odd(1, 10);  // Generates from {1, 3, 5, 7, 9}
+  /// ```
   pub fn odd<T: Choose + Num + Copy + 'static>(start: T, stop_exclusive: T) -> Gen<T> {
     let two = T::one().add(T::one());
     Self::choose(
@@ -499,8 +874,7 @@ impl Gens {
   }
 }
 
-/// Generator that generates values.<br/>
-/// 値を生成するジェネレータ。
+/// Generator that generates values.
 #[derive(Debug)]
 pub struct Gen<A> {
   sample: State<RNG, A>,
@@ -515,20 +889,55 @@ impl<A: Clone + 'static> Clone for Gen<A> {
 }
 
 impl<A: Clone + 'static> Gen<A> {
-  /// Evaluates expressions held by the Gen and generates values.<br/>
-  /// Genが保持する式を評価し値を生成します。  
+  /// Evaluates the Gen with a given RNG to produce a value.
+  ///
+  /// # Arguments
+  /// * `rng` - The random number generator to use
+  ///
+  /// # Returns
+  /// * A tuple `(A, RNG)` containing the generated value and the updated RNG state
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// use prop_check_rs::rng::RNG;
+  /// let gen = Gens::choose(1, 10);
+  /// let (value, new_rng) = gen.run(RNG::new());
+  /// assert!(value >= 1 && value <= 10);
+  /// ```
   pub fn run(self, rng: RNG) -> (A, RNG) {
     self.sample.run(rng)
   }
 
-  /// Generate a Gen by specifying a State.<br/>
-  /// Stateを指定してGenを生成します。
+  /// Creates a new Gen by wrapping a State.
+  ///
+  /// # Arguments
+  /// * `b` - The State to wrap in a Gen
+  ///
+  /// # Returns
+  /// * A new `Gen<B>` containing the provided State
   pub fn new<B>(b: State<RNG, B>) -> Gen<B> {
     Gen { sample: b }
   }
 
-  /// Applies a function to Gen.<br/>
-  /// Genに関数を適用します。
+  /// Transforms the output of a Gen using a function.
+  ///
+  /// # Arguments
+  /// * `f` - A function to apply to the generated value
+  ///
+  /// # Returns
+  /// * A new `Gen<B>` that applies the function to generated values
+  ///
+  /// # Type Parameters
+  /// * `B` - The result type after applying the function
+  /// * `F` - The function type, must be Fn(A) -> B + 'static
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let numbers = Gens::choose(1, 10);
+  /// let doubled = numbers.map(|x| x * 2);  // Generates numbers from 2 to 20
+  /// ```
   pub fn map<B, F>(self, f: F) -> Gen<B>
   where
     F: Fn(A) -> B + 'static,
@@ -536,8 +945,27 @@ impl<A: Clone + 'static> Gen<A> {
     Self::new(self.sample.map(f))
   }
 
-  /// Applies a function that takes the result of two Gen's as arguments.<br/>
-  /// 二つのGenの結果を引数に取る関数を適用します。
+  /// Combines two Gens using a function that takes both of their results.
+  ///
+  /// # Arguments
+  /// * `g` - Another Gen to combine with this one
+  /// * `f` - A function that combines the results of both Gens
+  ///
+  /// # Returns
+  /// * A new `Gen<C>` that combines the results of both Gens
+  ///
+  /// # Type Parameters
+  /// * `B` - The type of the second Gen's output
+  /// * `C` - The result type after combining both outputs
+  /// * `F` - The function type, must be Fn(A, B) -> C + 'static
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let x = Gens::choose(1, 5);
+  /// let y = Gens::choose(6, 10);
+  /// let sum = x.and_then(y, |a, b| a + b);  // Generates sums from 7 to 15
+  /// ```
   pub fn and_then<B, C, F>(self, g: Gen<B>, f: F) -> Gen<C>
   where
     F: Fn(A, B) -> C + 'static,
@@ -547,8 +975,24 @@ impl<A: Clone + 'static> Gen<A> {
     Self::new(self.sample.and_then(g.sample).map(move |(a, b)| f(a, b)))
   }
 
-  /// Applies a function to a Gen that takes the result of the Gen as an argument and returns the result.<br/>
-  /// Genに対してそのGenの結果を引数にとりGenを返す関数を適用しその結果を返します。
+  /// Chains this Gen with a function that returns another Gen.
+  ///
+  /// # Arguments
+  /// * `f` - A function that takes the result of this Gen and returns a new Gen
+  ///
+  /// # Returns
+  /// * A new `Gen<B>` that represents the chained computation
+  ///
+  /// # Type Parameters
+  /// * `B` - The type of the resulting Gen
+  /// * `F` - The function type, must be Fn(A) -> Gen<B> + 'static
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::Gens;
+  /// let numbers = Gens::choose(1, 3);
+  /// let repeated = numbers.flat_map(|n| Gens::list_of_n(n, Gens::pure(n)));
+  /// ```
   pub fn flat_map<B, F>(self, f: F) -> Gen<B>
   where
     F: Fn(A) -> Gen<B> + 'static,
@@ -557,14 +1001,11 @@ impl<A: Clone + 'static> Gen<A> {
   }
 }
 
-/// Generator with size information.<br/>
-/// サイズ情報を持つジェネレータ。
+/// Generator with size information.
 pub enum SGen<A> {
-  /// Generator with size information.<br/>
-  /// サイズ情報を持つジェネレータ。
+  /// Generator with size information.
   Sized(Rc<RefCell<dyn Fn(u32) -> Gen<A>>>),
-  /// Generator without size information.<br/>
-  /// サイズ情報を持たないジェネレータ。
+  /// Generator without size information.
   Unsized(Gen<A>),
 }
 
@@ -578,22 +1019,65 @@ impl<A: Clone + 'static> Clone for SGen<A> {
 }
 
 impl<A: Clone + 'static> SGen<A> {
-  /// Generates a Gen with size information.<br/>
-  /// サイズ情報を持つGenを生成します。
+  /// Creates a sized generator that can produce different Gens based on a size parameter.
+  ///
+  /// # Arguments
+  /// * `f` - A function that takes a size parameter and returns a Gen
+  ///
+  /// # Returns
+  /// * An `SGen<A>` that can generate size-dependent values
+  ///
+  /// # Type Parameters
+  /// * `F` - The function type, must be Fn(u32) -> Gen<A> + 'static
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::SGen;
+  /// use prop_check_rs::gen::Gens;
+  /// let sized_gen = SGen::of_sized(|size| Gens::list_of_n(size as usize, Gens::choose(1, 10)));
+  /// ```
   pub fn of_sized<F>(f: F) -> SGen<A>
   where
     F: Fn(u32) -> Gen<A> + 'static, {
     SGen::Sized(Rc::new(RefCell::new(f)))
   }
 
-  /// Generates a Gen without size information.<br/>
-  /// サイズ情報を持たないGenを生成します。
+  /// Creates an unsized generator that wraps a fixed Gen.
+  ///
+  /// # Arguments
+  /// * `gen` - The Gen to wrap
+  ///
+  /// # Returns
+  /// * An `SGen<A>` that always uses the provided Gen
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::SGen;
+  /// use prop_check_rs::gen::Gens;
+  /// let fixed_gen = SGen::of_unsized(Gens::choose(1, 10));
+  /// ```
   pub fn of_unsized(gen: Gen<A>) -> SGen<A> {
     SGen::Unsized(gen)
   }
 
-  /// Evaluates expressions held by the Gen and generates values.<br/>
-  /// SGenが保持する式を評価しGenを生成します。
+  /// Runs the generator with an optional size parameter to produce a Gen.
+  ///
+  /// # Arguments
+  /// * `i` - Optional size parameter, required for Sized variants
+  ///
+  /// # Returns
+  /// * A `Gen<A>` that can generate values
+  ///
+  /// # Panics
+  /// * Panics if a Sized variant is run without a size parameter
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::gen::SGen;
+  /// use prop_check_rs::gen::Gens;
+  /// let sized_gen = SGen::of_sized(|n| Gens::list_of_n(n as usize, Gens::pure(1)));
+  /// let gen = sized_gen.run(Some(5));  // Creates a Gen that produces a vector of 5 ones
+  /// ```
   pub fn run(&self, i: Option<u32>) -> Gen<A> {
     match self {
       SGen::Sized(f) => {
