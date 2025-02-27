@@ -611,12 +611,23 @@ mod tests {
   fn test_map() {
     init();
     let rng = new_rng();
-    let mut int_fn = RNG::int_value();
-    // int_fnをクローンして使用
-    let int_fn_clone = int_fn.clone();
-    let mut map_fn = RNG::map(int_fn, |x| x * 2);
-    let (value, _) = map_fn(rng.clone());
-    let (original, _) = int_fn_clone(rng);
+    
+    // 2つの独立したint_fn関数を作成
+    let mut int_fn1 = RNG::int_value();
+    let mut int_fn2 = RNG::int_value();
+    
+    // 同じシードを使用して結果を比較できるようにする
+    let rng_with_seed = rng.with_seed(42);
+    let rng_clone = rng_with_seed.clone();
+    
+    // 一方の関数で値を取得
+    let (original, _) = int_fn1(rng_with_seed);
+    
+    // もう一方の関数をmapで変換して値を取得
+    let mut map_fn = RNG::map(int_fn2, |x| x * 2);
+    let (value, _) = map_fn(rng_clone);
+    
+    // 結果を検証
     assert_eq!(value, original * 2);
   }
 
