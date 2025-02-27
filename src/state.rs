@@ -104,8 +104,8 @@ where
     Self::new(move |_| ((), t.clone()))
   }
 
-  /// Modify the state after get it.<br/>
-  /// 状態を取得した後に変更します。
+  /// Modify the state by applying a function.<br/>
+  /// 関数を適用して状態を変更します。
   pub fn modify<T, F>(f: F) -> State<T, ()>
   where
     F: Fn(T) -> T + 'static,

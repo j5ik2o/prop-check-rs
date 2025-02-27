@@ -119,7 +119,7 @@ impl PropResult {
       PropResult::Passed { test_cases } => format!("OK, passed {} tests", test_cases),
       PropResult::Proved => "OK, proved property".to_string(),
       PropResult::Falsified { failure, successes } => {
-        format!("Falsified after {} passed tests: {}", failure, successes)
+        format!("Falsified after {} passed tests: {}", successes, failure)
       }
     }
   }

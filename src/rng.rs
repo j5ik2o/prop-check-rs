@@ -172,8 +172,8 @@ impl RNG {
     }
   }
 
-  /// `new_with_seed` is a constructor with seed.
-  /// `new_with_seed`はシード値を指定するファクトリです。
+  /// `with_seed` is a constructor with seed.
+  /// `with_seed`はシード値を指定するファクトリです。
   pub fn with_seed(mut self, seed: u64) -> Self {
     self.rng = Rc::new(RefCell::new(StdRng::seed_from_u64(seed)));
     self

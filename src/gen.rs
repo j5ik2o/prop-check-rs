@@ -231,7 +231,7 @@ impl Gens {
   /// u32型の値を一つ返すGenを生成します。
   pub fn one_u32() -> Gen<u32> {
     Gen {
-      sample: State::<RNG, u16>::new(move |rng: RNG| rng.next_u32()),
+      sample: State::<RNG, u32>::new(move |rng: RNG| rng.next_u32()),
     }
   }
 
@@ -247,7 +247,7 @@ impl Gens {
   /// u16型の値を一つ返すGenを生成します。
   pub fn one_u16() -> Gen<u16> {
     Gen {
-      sample: State::<RNG, u32>::new(move |rng: RNG| rng.next_u16()),
+      sample: State::<RNG, u16>::new(move |rng: RNG| rng.next_u16()),
     }
   }
 
@@ -451,7 +451,7 @@ impl Gens {
         stop_exclusive
       },
     )
-    .map(move |n| if n % two == T::zero() { n + T::one() } else { n })
+    .map(move |n| if n % two != T::zero() { n + T::one() } else { n })
   }
 
   /// Generates a Gen that returns one randomly selected odd number from a specified range of values.<br/>
@@ -466,7 +466,7 @@ impl Gens {
         stop_exclusive
       },
     )
-    .map(move |n| if n % two != T::zero() { n + T::one() } else { n })
+    .map(move |n| if n % two == T::zero() { n + T::one() } else { n })
   }
 }
 
