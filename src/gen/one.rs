@@ -108,3 +108,115 @@ impl One for f32 {
     Gens::one_f32()
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::rng::RNG;
+  use std::env;
+
+  fn init() {
+    env::set_var("RUST_LOG", "info");
+    let _ = env_logger::builder().is_test(true).try_init();
+  }
+
+  fn new_rng() -> RNG {
+    RNG::new()
+  }
+
+  #[test]
+  fn test_one_i64() {
+    init();
+    let gen = <i64 as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(value.is_i64());
+  }
+
+  #[test]
+  fn test_one_u64() {
+    init();
+    let gen = <u64 as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(value <= u64::MAX);
+  }
+
+  #[test]
+  fn test_one_i32() {
+    init();
+    let gen = <i32 as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(value >= i32::MIN && value <= i32::MAX);
+  }
+
+  #[test]
+  fn test_one_u32() {
+    init();
+    let gen = <u32 as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(value <= u32::MAX);
+  }
+
+  #[test]
+  fn test_one_i16() {
+    init();
+    let gen = <i16 as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(value >= i16::MIN && value <= i16::MAX);
+  }
+
+  #[test]
+  fn test_one_u16() {
+    init();
+    let gen = <u16 as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(value <= u16::MAX);
+  }
+
+  #[test]
+  fn test_one_i8() {
+    init();
+    let gen = <i8 as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(value >= i8::MIN && value <= i8::MAX);
+  }
+
+  #[test]
+  fn test_one_u8() {
+    init();
+    let gen = <u8 as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(value <= u8::MAX);
+  }
+
+  #[test]
+  fn test_one_char() {
+    init();
+    let gen = <char as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(value as u32 <= u8::MAX as u32);
+  }
+
+  #[test]
+  fn test_one_bool() {
+    init();
+    let gen = <bool as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(value == true || value == false);
+  }
+
+  #[test]
+  fn test_one_f64() {
+    init();
+    let gen = <f64 as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(!value.is_nan());
+  }
+
+  #[test]
+  fn test_one_f32() {
+    init();
+    let gen = <f32 as One>::one();
+    let (value, _) = gen.run(new_rng());
+    assert!(!value.is_nan());
+  }
+}

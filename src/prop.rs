@@ -425,4 +425,193 @@ mod tests {
     );
     test_with_prop(prop, 10, 100, new_rng())
   }
+
+  #[test]
+  fn test_prop_result_passed() {
+    init();
+    let result = PropResult::Passed { test_cases: 100 };
+    assert!(!result.is_falsified());
+    assert!(result.non_falsified());
+    assert_eq!(result.message(), "OK, passed 100 tests");
+  }
+
+  #[test]
+  fn test_prop_result_proved() {
+    init();
+    let result = PropResult::Proved;
+    assert!(!result.is_falsified());
+    assert!(result.non_falsified());
+    assert_eq!(result.message(), "OK, proved property");
+  }
+
+  #[test]
+  fn test_prop_result_falsified() {
+    init();
+    let result = PropResult::Falsified {
+      failure: "test failed".to_string(),
+      successes: 42,
+    };
+    assert!(result.is_falsified());
+    assert!(!result.non_falsified());
+    assert_eq!(result.message(), "Falsified after 42 passed tests: test failed");
+  }
+
+  #[test]
+  fn test_prop_result_map() {
+    init();
+    let result = PropResult::Passed { test_cases: 100 };
+    let mapped = result.map(|n| n * 2);
+    match mapped {
+      PropResult::Passed { test_cases } => assert_eq!(test_cases, 200),
+      _ => panic!("Expected PropResult::Passed"),
+    }
+  }
+
+  #[test]
+  fn test_prop_result_flat_map() {
+    init();
+    let result = PropResult::Passed { test_cases: 100 };
+    let flat_mapped = result.flat_map(|n| PropResult::Passed {
+      test_cases: n.unwrap() * 2,
+    });
+    match flat_mapped {
+      PropResult::Passed { test_cases } => assert_eq!(test_cases, 200),
+      _ => panic!("Expected PropResult::Passed"),
+    }
+  }
+
+  #[test]
+  fn test_prop_result_to_result() {
+    init();
+    let passed = PropResult::Passed { test_cases: 100 };
+    let passed_result = passed.to_result();
+    assert!(passed_result.is_ok());
+    assert_eq!(passed_result.unwrap(), "OK, passed 100 tests");
+
+    let falsified = PropResult::Falsified {
+      failure: "test failed".to_string(),
+      successes: 42,
+    };
+    let falsified_result = falsified.to_result();
+    assert!(falsified_result.is_err());
+  }
+
+  #[test]
+  fn test_for_all_gen() {
+    init();
+    // 常に成功するプロパティ
+    let gen = Gens::choose_i32(1, 100);
+    let prop = for_all_gen(gen.clone(), |_| true);
+    let result = prop.run(1, 10, new_rng());
+    match result {
+      PropResult::Passed { test_cases } => assert_eq!(test_cases, 10),
+      _ => panic!("Expected PropResult::Passed"),
+    }
+
+    // 常に失敗するプロパティ
+    let prop = for_all_gen(gen, |_| false);
+    let result = prop.run(1, 10, new_rng());
+    assert!(result.is_falsified());
+  }
+
+  #[test]
+  fn test_for_all_sgen() {
+    init();
+    // 常に成功するプロパティ
+    let gen = Gens::choose_i32(1, 100);
+    let sgen = crate::gen::SGen::Unsized(gen.clone());
+    let prop = for_all_sgen(sgen, || |_| true);
+    let result = prop.run(1, 10, new_rng());
+    match result {
+      PropResult::Passed { test_cases } => assert_eq!(test_cases, 10),
+      _ => panic!("Expected PropResult::Passed"),
+    }
+  }
+
+  #[test]
+  fn test_prop_and() {
+    init();
+    // 両方成功するプロパティ
+    let gen1 = Gens::choose_i32(1, 100);
+    let gen2 = Gens::choose_i32(1, 100);
+    let prop1 = for_all_gen(gen1, |_| true);
+    let prop2 = for_all_gen(gen2, |_| true);
+    let combined = prop1.and(prop2);
+    let result = combined.run(1, 10, new_rng());
+    match result {
+      PropResult::Passed { test_cases } => assert_eq!(test_cases, 10),
+      _ => panic!("Expected PropResult::Passed"),
+    }
+
+    // 最初が失敗するプロパティ
+    let gen1 = Gens::choose_i32(1, 100);
+    let gen2 = Gens::choose_i32(1, 100);
+    let prop1 = for_all_gen(gen1, |_| false);
+    let prop2 = for_all_gen(gen2, |_| true);
+    let combined = prop1.and(prop2);
+    let result = combined.run(1, 10, new_rng());
+    assert!(result.is_falsified());
+  }
+
+  #[test]
+  fn test_prop_or() {
+    init();
+    // 両方成功するプロパティ
+    let gen1 = Gens::choose_i32(1, 100);
+    let gen2 = Gens::choose_i32(1, 100);
+    let prop1 = for_all_gen(gen1, |_| true);
+    let prop2 = for_all_gen(gen2, |_| true);
+    let combined = prop1.or(prop2);
+    let result = combined.run(1, 10, new_rng());
+    match result {
+      PropResult::Passed { test_cases } => assert_eq!(test_cases, 10),
+      _ => panic!("Expected PropResult::Passed"),
+    }
+
+    // 最初が失敗するプロパティ
+    let gen1 = Gens::choose_i32(1, 100);
+    let gen2 = Gens::choose_i32(1, 100);
+    let prop1 = for_all_gen(gen1, |_| false);
+    let prop2 = for_all_gen(gen2, |_| true);
+    let combined = prop1.or(prop2);
+    let result = combined.run(1, 10, new_rng());
+    match result {
+      PropResult::Passed { test_cases } => assert_eq!(test_cases, 10),
+      _ => panic!("Expected PropResult::Passed"),
+    }
+
+    // 両方失敗するプロパティ
+    let gen1 = Gens::choose_i32(1, 100);
+    let gen2 = Gens::choose_i32(1, 100);
+    let prop1 = for_all_gen(gen1, |_| false);
+    let prop2 = for_all_gen(gen2, |_| false);
+    let combined = prop1.or(prop2);
+    let result = combined.run(1, 10, new_rng());
+    assert!(result.is_falsified());
+  }
+
+  #[test]
+  fn test_prop_tag() {
+    init();
+    let gen = Gens::choose_i32(1, 100);
+    let prop = for_all_gen(gen, |_| false);
+    let tagged = prop.tag("Custom error message".to_string());
+    let result = tagged.run(1, 10, new_rng());
+    match result {
+      PropResult::Falsified { failure, .. } => {
+        assert!(failure.contains("Custom error message"));
+      }
+      _ => panic!("Expected PropResult::Falsified"),
+    }
+  }
+
+  #[test]
+  fn test_run_with_prop() -> Result<()> {
+    init();
+    let gen = Gens::choose_i32(1, 100);
+    let prop = for_all_gen(gen, |_| true);
+    let result = run_with_prop(prop, 1, 10, new_rng());
+    assert!(result.is_ok());
+    Ok(())
+  }
 }

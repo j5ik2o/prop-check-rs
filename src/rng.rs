@@ -391,6 +391,10 @@ mod tests {
     let _ = env_logger::builder().is_test(true).try_init();
   }
 
+  fn new_rng() -> RNG {
+    RNG::new()
+  }
+
   #[test]
   fn next_i32() {
     init();
@@ -399,5 +403,271 @@ mod tests {
     log::info!("{:?}", v1);
     let (v2, _) = u32::rnd_gen(r1);
     log::info!("{:?}", v2);
+  }
+
+  #[test]
+  fn test_next_i64() {
+    init();
+    let rng = new_rng();
+    let (value, new_rng) = rng.next_i64();
+    assert!(value >= i64::MIN && value <= i64::MAX);
+    assert_ne!(rng, new_rng); // 新しいRNGインスタンスが返されることを確認
+  }
+
+  #[test]
+  fn test_next_u64() {
+    init();
+    let rng = new_rng();
+    let (value, _) = rng.next_u64();
+    assert!(value <= u64::MAX);
+  }
+
+  #[test]
+  fn test_next_i32() {
+    init();
+    let rng = new_rng();
+    let (value, _) = rng.next_i32();
+    assert!(value >= i32::MIN && value <= i32::MAX);
+  }
+
+  #[test]
+  fn test_next_u32() {
+    init();
+    let rng = new_rng();
+    let (value, _) = rng.next_u32();
+    assert!(value <= u32::MAX);
+  }
+
+  #[test]
+  fn test_next_i16() {
+    init();
+    let rng = new_rng();
+    let (value, _) = rng.next_i16();
+    assert!(value >= i16::MIN && value <= i16::MAX);
+  }
+
+  #[test]
+  fn test_next_u16() {
+    init();
+    let rng = new_rng();
+    let (value, _) = rng.next_u16();
+    assert!(value <= u16::MAX);
+  }
+
+  #[test]
+  fn test_next_i8() {
+    init();
+    let rng = new_rng();
+    let (value, _) = rng.next_i8();
+    assert!(value >= i8::MIN && value <= i8::MAX);
+  }
+
+  #[test]
+  fn test_next_u8() {
+    init();
+    let rng = new_rng();
+    let (value, _) = rng.next_u8();
+    assert!(value <= u8::MAX);
+  }
+
+  #[test]
+  fn test_next_f64() {
+    init();
+    let rng = new_rng();
+    let (value, _) = rng.next_f64();
+    assert!(value >= 0.0 && value < 1.0);
+  }
+
+  #[test]
+  fn test_next_f32() {
+    init();
+    let rng = new_rng();
+    let (value, _) = rng.next_f32();
+    assert!(value >= 0.0 && value < 1.0);
+  }
+
+  #[test]
+  fn test_next_bool() {
+    init();
+    let rng = new_rng();
+    let (value, _) = rng.next_bool();
+    assert!(value == true || value == false);
+  }
+
+  #[test]
+  fn test_with_seed() {
+    init();
+    let rng1 = new_rng().with_seed(42);
+    let rng2 = new_rng().with_seed(42);
+    
+    // 同じシードで生成した値が同じであることを確認
+    let (v1, _) = rng1.next_i32();
+    let (v2, _) = rng2.next_i32();
+    assert_eq!(v1, v2);
+  }
+
+  #[test]
+  fn test_i32_f32() {
+    init();
+    let rng = new_rng();
+    let ((i, f), _) = rng.i32_f32();
+    assert!(i >= i32::MIN && i <= i32::MAX);
+    assert!(f >= 0.0 && f < 1.0);
+  }
+
+  #[test]
+  fn test_f32_i32() {
+    init();
+    let rng = new_rng();
+    let ((f, i), _) = rng.f32_i32();
+    assert!(f >= 0.0 && f < 1.0);
+    assert!(i >= i32::MIN && i <= i32::MAX);
+  }
+
+  #[test]
+  fn test_f32_3() {
+    init();
+    let rng = new_rng();
+    let ((f1, f2, f3), _) = rng.f32_3();
+    assert!(f1 >= 0.0 && f1 < 1.0);
+    assert!(f2 >= 0.0 && f2 < 1.0);
+    assert!(f3 >= 0.0 && f3 < 1.0);
+  }
+
+  #[test]
+  fn test_i32s() {
+    init();
+    let rng = new_rng();
+    let count = 100;
+    let (values, _) = rng.i32s(count);
+    assert_eq!(values.len(), count as usize);
+    
+    // すべての値が有効な範囲内にあることを確認
+    for value in values {
+      assert!(value >= i32::MIN && value <= i32::MAX);
+    }
+  }
+
+  #[test]
+  fn test_i32s_direct() {
+    init();
+    let rng = new_rng();
+    let count = 100;
+    let (values, _) = rng.i32s_direct(count);
+    assert_eq!(values.len(), count as usize);
+  }
+
+  #[test]
+  fn test_i32s_parallel() {
+    init();
+    let rng = new_rng();
+    let count = 50_000; // 並列処理のしきい値以上
+    let (values, _) = rng.i32s_parallel(count);
+    assert_eq!(values.len(), count as usize);
+  }
+
+  #[test]
+  fn test_unit() {
+    init();
+    let rng = new_rng();
+    let mut unit_fn = RNG::unit(42);
+    let (value, _) = unit_fn(rng);
+    assert_eq!(value, 42);
+  }
+
+  #[test]
+  fn test_sequence() {
+    init();
+    let rng = new_rng();
+    let mut fns = vec![
+      RNG::unit(1),
+      RNG::unit(2),
+      RNG::unit(3),
+    ];
+    let mut sequence_fn = RNG::sequence(fns);
+    let (values, _) = sequence_fn(rng);
+    assert_eq!(values, vec![1, 2, 3]);
+  }
+
+  #[test]
+  fn test_int_value() {
+    init();
+    let rng = new_rng();
+    let mut int_fn = RNG::int_value();
+    let (value, _) = int_fn(rng);
+    assert!(value >= i32::MIN && value <= i32::MAX);
+  }
+
+  #[test]
+  fn test_double_value() {
+    init();
+    let rng = new_rng();
+    let mut double_fn = RNG::double_value();
+    let (value, _) = double_fn(rng);
+    assert!(value >= 0.0 && value < 1.0);
+  }
+
+  #[test]
+  fn test_map() {
+    init();
+    let rng = new_rng();
+    let mut int_fn = RNG::int_value();
+    let mut map_fn = RNG::map(int_fn, |x| x * 2);
+    let (value, _) = map_fn(rng.clone());
+    let (original, _) = int_fn(rng);
+    assert_eq!(value, original * 2);
+  }
+
+  #[test]
+  fn test_map2() {
+    init();
+    let rng = new_rng();
+    let mut int_fn = RNG::int_value();
+    let mut double_fn = RNG::double_value();
+    let mut map2_fn = RNG::map2(int_fn, double_fn, |i, d| (i as f32 + d));
+    let (value, _) = map2_fn(rng);
+    assert!(!value.is_nan());
+  }
+
+  #[test]
+  fn test_both() {
+    init();
+    let rng = new_rng();
+    let mut int_fn = RNG::int_value();
+    let mut double_fn = RNG::double_value();
+    let mut both_fn = RNG::both(int_fn, double_fn);
+    let ((i, d), _) = both_fn(rng);
+    assert!(i >= i32::MIN && i <= i32::MAX);
+    assert!(d >= 0.0 && d < 1.0);
+  }
+
+  #[test]
+  fn test_rand_int_double() {
+    init();
+    let rng = new_rng();
+    let mut fn_id = RNG::rand_int_double();
+    let ((i, d), _) = fn_id(rng);
+    assert!(i >= i32::MIN && i <= i32::MAX);
+    assert!(d >= 0.0 && d < 1.0);
+  }
+
+  #[test]
+  fn test_rand_double_int() {
+    init();
+    let rng = new_rng();
+    let mut fn_di = RNG::rand_double_int();
+    let ((d, i), _) = fn_di(rng);
+    assert!(d >= 0.0 && d < 1.0);
+    assert!(i >= i32::MIN && i <= i32::MAX);
+  }
+
+  #[test]
+  fn test_flat_map() {
+    init();
+    let rng = new_rng();
+    let mut int_fn = RNG::int_value();
+    let flat_map_fn = RNG::flat_map(int_fn, |i| RNG::unit(i * 2));
+    let (value, _) = flat_map_fn(rng);
+    assert!(value % 2 == 0); // 2の倍数であることを確認
   }
 }
