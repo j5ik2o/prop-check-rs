@@ -22,7 +22,18 @@ iso-4217 = "0.1"
 num-bigint = "0.4.4"
 itertools = "0.14.0"
 anyhow = "1.0.82"
+num_cpus = "1.16.0"
 
 [dev-dependencies]
 env_logger = "0.11.3"
 ctor = "0.4.0"
+criterion = "0.5.1"
+num_cpus = "1.16.0"
+
+[[bench]]
+name = "rng_benchmark"
+harness = false
+
+[[bench]]
+name = "gen_benchmark"
+harness = false

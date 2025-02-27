@@ -4,7 +4,6 @@ use crate::rng::RNG;
 use anyhow::*;
 use std::cell::RefCell;
 use std::fmt::Debug;
-use std::iter::FromFn;
 use std::rc::Rc;
 
 pub type MaxSize = u32;
@@ -184,16 +183,35 @@ where
   Prop {
     run_f: Rc::new(RefCell::new(move |max, n, rng| {
       let cases_per_size = n / max;
-      let props = itertools::iterate(0, |i| *i + 1)
-        .map(|i| for_all_gen(gf(i), test()))
-        .take(max as usize)
-        .collect::<Vec<_>>();
-      let p = props
-        .into_iter()
-        .map(|p| Prop::new(move |max, _, rng| p.run(max, cases_per_size, rng)))
-        .reduce(|l, r| l.and(r))
-        .unwrap();
-      p.run(max, n, rng).flat_map(|_| PropResult::Proved)
+
+      // 事前に必要な容量を確保してVecを作成
+      let mut props = Vec::with_capacity(max as usize);
+
+      // イテレータの連鎖を単純なループに置き換え
+      for i in 0..max {
+        props.push(for_all_gen(gf(i), test()));
+      }
+
+      // 空の場合は早期リターン
+      if props.is_empty() {
+        return PropResult::Passed { test_cases: 0 };
+      }
+
+      // 最初のPropをクローンして取得
+      let first_prop = props[0].clone();
+      let mut result_prop = Prop::new(move |max, _, rng| first_prop.run(max, cases_per_size, rng));
+
+      // 残りのPropsを処理
+      for i in 1..props.len() {
+        let p = props[i].clone();
+        let prop = Prop::new(move |max, _, rng| p.run(max, cases_per_size, rng));
+        result_prop = result_prop.and(prop);
+      }
+
+      // 最終結果を実行
+      match result_prop.run(max, n, rng) {
+        _ => PropResult::Proved,
+      }
     })),
   }
 }
@@ -212,23 +230,28 @@ where
   F: FnMut(A) -> bool + 'static,
   A: Clone + Debug + 'static, {
   Prop {
-    run_f: Rc::new(RefCell::new(move |_, n, rng| {
-      let success_counter = itertools::iterate(1, |&i| i + 1).into_iter();
-      random_stream(g.clone(), rng)
-        .zip(success_counter)
-        .take(n as usize)
-        .map(|(test_value, success_count)| {
-          if test(test_value.clone()) {
-            PropResult::Passed { test_cases: n }
-          } else {
-            PropResult::Falsified {
-              failure: format!("{:?}", test_value),
-              successes: success_count,
-            }
-          }
-        })
-        .find(move |e| e.is_falsified())
-        .unwrap_or(PropResult::Passed { test_cases: n })
+    run_f: Rc::new(RefCell::new(move |_, n, mut rng| {
+      // イテレータの連鎖を単純なループに置き換え
+      let mut success_count = 1;
+
+      for _ in 0..n {
+        // テスト値を生成
+        let (test_value, new_rng) = g.clone().run(rng);
+        rng = new_rng;
+
+        // テスト実行
+        if !test(test_value.clone()) {
+          return PropResult::Falsified {
+            failure: format!("{:?}", test_value),
+            successes: success_count,
+          };
+        }
+
+        success_count += 1;
+      }
+
+      // すべてのテストがパスした場合
+      PropResult::Passed { test_cases: n }
     })),
   }
 }
