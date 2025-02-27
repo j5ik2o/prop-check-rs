@@ -383,7 +383,7 @@ impl RNG {
 
 #[cfg(test)]
 mod tests {
-  use crate::rng::{RandGen, RNG};
+  use crate::rng::{NextRandValue, RandGen, RNG};
   use std::env;
 
   fn init() {
