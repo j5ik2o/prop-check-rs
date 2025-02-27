@@ -45,7 +45,13 @@ where
     (if i < 0 { -(i + 1) as u8 } else { i as u8 }, r)
   }
 
-  /// `next_f64` generates an `f64` and an updated instance of Self.
+  /// `next_f64` generates an `f64` in the range [0.0, 1.0) and an updated instance of Self.<br/>
+  /// `next_f64`は0.0以上1.0未満の範囲の`f64`と更新されたSelfを生成します。
+  ///
+  /// # Returns
+  /// * A tuple containing:
+  ///   * An `f64` value in the range [0.0, 1.0)
+  ///   * An updated instance of Self
   fn next_f64(&self) -> (f64, Self) {
     let (i, r) = self.next_i64();
     // 負の値を正の値に変換して、0.0から1.0未満の範囲に正規化
@@ -57,7 +63,13 @@ where
     (normalized, r)
   }
 
-  /// `next_f32` generates an `f32` and an updated instance of Self.
+  /// `next_f32` generates an `f32` in the range [0.0, 1.0) and an updated instance of Self.<br/>
+  /// `next_f32`は0.0以上1.0未満の範囲の`f32`と更新されたSelfを生成します。
+  ///
+  /// # Returns
+  /// * A tuple containing:
+  ///   * An `f32` value in the range [0.0, 1.0)
+  ///   * An updated instance of Self
   fn next_f32(&self) -> (f32, Self) {
     let (i, r) = self.next_i32();
     // 負の値を正の値に変換して、0.0から1.0未満の範囲に正規化

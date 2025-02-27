@@ -354,14 +354,24 @@ impl Gens {
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i64.<br/>
   /// i64型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  ///
+  /// # Arguments
+  /// * `min` - The minimum value (inclusive) of the range
+  /// * `max` - The maximum value (inclusive) of the range
+  ///
+  /// # Returns
+  /// * A `Gen<i64>` that generates random i64 values in the range [min, max]
+  ///
+  /// # Panics
+  /// * Panics if `min > max` (invalid range)
   pub fn choose_i64(min: i64, max: i64) -> Gen<i64> {
     if min > max {
       panic!("Invalid range: min > max");
     }
-
+    
     // 範囲の大きさを計算
     let range = max - min + 1;
-
+    
     // オーバーフローを防ぐために絶対値を使用
     Gen {
       sample: State::<RNG, i64>::new(move |rng: RNG| {
@@ -385,14 +395,24 @@ impl Gens {
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i32.<br/>
   /// i32型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  ///
+  /// # Arguments
+  /// * `min` - The minimum value (inclusive) of the range
+  /// * `max` - The maximum value (inclusive) of the range
+  ///
+  /// # Returns
+  /// * A `Gen<i32>` that generates random i32 values in the range [min, max]
+  ///
+  /// # Panics
+  /// * Panics if `min > max` (invalid range)
   pub fn choose_i32(min: i32, max: i32) -> Gen<i32> {
     if min > max {
       panic!("Invalid range: min > max");
     }
-
+    
     // 範囲の大きさを計算
     let range = max - min + 1;
-
+    
     // オーバーフローを防ぐために絶対値を使用
     Gen {
       sample: State::<RNG, i32>::new(move |rng: RNG| {
@@ -452,6 +472,16 @@ impl Gens {
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type f64.<br/>
   /// f64型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  ///
+  /// # Arguments
+  /// * `min` - The minimum value (inclusive) of the range
+  /// * `max` - The maximum value (inclusive) of the range
+  ///
+  /// # Returns
+  /// * A `Gen<f64>` that generates random f64 values in the range [min, max]
+  ///
+  /// # Note
+  /// * The distribution is uniform across the range
   pub fn choose_f64(min: f64, max: f64) -> Gen<f64> {
     Gen {
       sample: State::<RNG, f64>::new(move |rng: RNG| rng.next_f64()),
@@ -461,6 +491,16 @@ impl Gens {
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type f32.<br/>
   /// f32型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
+  ///
+  /// # Arguments
+  /// * `min` - The minimum value (inclusive) of the range
+  /// * `max` - The maximum value (inclusive) of the range
+  ///
+  /// # Returns
+  /// * A `Gen<f32>` that generates random f32 values in the range [min, max]
+  ///
+  /// # Note
+  /// * The distribution is uniform across the range
   pub fn choose_f32(min: f32, max: f32) -> Gen<f32> {
     Gen {
       sample: State::<RNG, f32>::new(move |rng: RNG| rng.next_f32()),
