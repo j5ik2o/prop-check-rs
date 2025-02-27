@@ -48,13 +48,25 @@ where
   /// `next_f64` generates an `f64` and an updated instance of Self.
   fn next_f64(&self) -> (f64, Self) {
     let (i, r) = self.next_i64();
-    (i as f64 / (i64::MAX as f64 + 1.0), r)
+    // 負の値を正の値に変換して、0.0から1.0未満の範囲に正規化
+    let normalized = if i < 0 {
+      (-i as f64) / (i64::MAX as f64 + 1.0)
+    } else {
+      i as f64 / (i64::MAX as f64 + 1.0)
+    };
+    (normalized, r)
   }
 
   /// `next_f32` generates an `f32` and an updated instance of Self.
   fn next_f32(&self) -> (f32, Self) {
     let (i, r) = self.next_i32();
-    (i as f32 / (i32::MAX as f32 + 1.0), r)
+    // 負の値を正の値に変換して、0.0から1.0未満の範囲に正規化
+    let normalized = if i < 0 {
+      (-i as f32) / (i32::MAX as f32 + 1.0)
+    } else {
+      i as f32 / (i32::MAX as f32 + 1.0)
+    };
+    (normalized, r)
   }
 
   /// `next_bool` generates a `bool` and an updated instance of Self.
@@ -411,7 +423,13 @@ mod tests {
     let rng = new_rng();
     let (value, new_rng) = rng.next_i64();
     assert!(value >= i64::MIN && value <= i64::MAX);
-    assert_ne!(rng, new_rng); // 新しいRNGインスタンスが返されることを確認
+    
+    // 新しいRNGインスタンスが返されることを確認
+    // 内部状態が変わっていることを確認するため、別の方法でチェック
+    let (value1, _) = rng.next_i32();
+    let (value2, _) = new_rng.next_i32();
+    // 同じシードから生成された異なるRNGインスタンスは異なる値を生成するはず
+    assert_ne!(value1, value2);
   }
 
   #[test]
@@ -624,11 +642,12 @@ mod tests {
     let (original, _) = int_fn1(rng_with_seed);
     
     // もう一方の関数をmapで変換して値を取得
-    let mut map_fn = RNG::map(int_fn2, |x| x * 2);
+    // オーバーフローを防ぐために、値を小さくする
+    let mut map_fn = RNG::map(int_fn2, |x| x / 2);
     let (value, _) = map_fn(rng_clone);
     
     // 結果を検証
-    assert_eq!(value, original * 2);
+    assert_eq!(value, original / 2);
   }
 
   #[test]
