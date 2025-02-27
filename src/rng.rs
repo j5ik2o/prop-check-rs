@@ -1,4 +1,5 @@
 use rand::prelude::*;
+use rand::thread_rng;
 
 /// The trait to generate random values.<br/>
 /// ランダムな値を生成するためのトレイトです。
@@ -136,67 +137,67 @@ impl Default for RNG {
 impl NextRandValue for RNG {
   fn next_i64(&self) -> (i64, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 
   fn next_u64(&self) -> (u64, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 
   fn next_i32(&self) -> (i32, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 
   fn next_u32(&self) -> (u32, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 
   fn next_i16(&self) -> (i16, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 
   fn next_u16(&self) -> (u16, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 
   fn next_i8(&self) -> (i8, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 
   fn next_u8(&self) -> (u8, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 
   fn next_f64(&self) -> (f64, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 
   fn next_f32(&self) -> (f32, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 
   fn next_bool(&self) -> (bool, Self) {
     let mut mr = self.rng.clone();
-    let n = mr.gen();
+    let n = mr.random();
     (n, Self { rng: mr })
   }
 }
@@ -206,7 +207,7 @@ impl RNG {
   /// `new`はファクトリです。
   pub fn new() -> Self {
     Self {
-      rng: StdRng::from_rng(thread_rng()).unwrap(),
+      rng: StdRng::seed_from_u64(0),
     }
   }
 
