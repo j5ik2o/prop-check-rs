@@ -9,16 +9,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
         persist-credentials: false
         token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-    - uses: actions-rs/toolchain@v1
+    - uses: dtolnay/rust-toolchain@stable
       with:
-        profile: minimal
         toolchain: nightly
-        override: true
     - name: release the crate
       run: |
         cargo publish --token ${{ secrets.CARGO_TOKEN }}
