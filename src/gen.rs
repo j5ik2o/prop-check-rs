@@ -80,26 +80,26 @@ impl Gens {
     // 事前に容量を確保するためにVecを使用
     let mut filtered = Vec::new();
     let mut total_weight = 0;
-    
+
     // 重みが0より大きい項目だけをフィルタリング
     for (weight, value) in values.into_iter() {
       if weight > 0 {
         filtered.push((weight, value));
       }
     }
-    
+
     // BTreeMapを構築（累積重みをキーとして使用）
     let mut tree = BTreeMap::new();
     for (weight, value) in filtered {
       total_weight += weight;
       tree.insert(total_weight, value);
     }
-    
+
     // 空の場合はエラーを回避
     if total_weight == 0 {
       panic!("Empty frequency distribution");
     }
-    
+
     // 乱数を生成して対応する値を返す
     Self::choose_u32(1, total_weight).flat_map(move |n| {
       // n以上の最小のキーを持つエントリを取得
@@ -157,22 +157,22 @@ impl Gens {
     Gen::<Vec<B>>::new(State::<RNG, Vec<B>>::new(move |rng: RNG| {
       let mut result = Vec::with_capacity(n);
       let mut current_rng = rng;
-      
+
       // チャンク単位で処理
       for chunk_start in (0..n).step_by(optimal_chunk_size) {
         // 現在のチャンクのサイズを計算（最後のチャンクは小さくなる可能性がある）
         let current_chunk_size = std::cmp::min(optimal_chunk_size, n - chunk_start);
-        
+
         // チャンクサイズ分のStateを生成
         let mut chunk_states: Vec<State<RNG, B>> = Vec::with_capacity(current_chunk_size);
         chunk_states.resize_with(current_chunk_size, || gen.clone().sample);
-        
+
         // チャンクを処理
         let (chunk_result, new_rng) = State::sequence(chunk_states).run(current_rng);
         result.extend(chunk_result);
         current_rng = new_rng;
       }
-      
+
       (result, current_rng)
     }))
   }
@@ -185,14 +185,14 @@ impl Gens {
     Gen::<Vec<B>>::new(State::<RNG, Vec<B>>::new(move |rng: RNG| {
       let mut result = Vec::with_capacity(n);
       let mut current_rng = rng;
-      
+
       // 遅延評価を使用して値を生成
       for _ in 0..n {
         let (value, new_rng) = gen.clone().run(current_rng);
         result.push(value);
         current_rng = new_rng;
       }
-      
+
       (result, current_rng)
     }))
   }
@@ -302,12 +302,12 @@ impl Gens {
   pub fn one_of<T: Choose + Clone + 'static>(values: impl IntoIterator<Item = Gen<T>>) -> Gen<T> {
     // 直接Vecに変換
     let vec: Vec<_> = values.into_iter().collect();
-    
+
     // 空の場合はエラーを回避
     if vec.is_empty() {
       panic!("Empty one_of distribution");
     }
-    
+
     // インデックスを選択して対応する値を返す
     Self::choose(0usize, vec.len() - 1).flat_map(move |idx| {
       let gen = &vec[idx as usize];
@@ -320,12 +320,12 @@ impl Gens {
   pub fn one_of_values<T: Choose + Clone + 'static>(values: impl IntoIterator<Item = T>) -> Gen<T> {
     // 直接Vecに変換
     let vec: Vec<_> = values.into_iter().collect();
-    
+
     // 空の場合はエラーを回避
     if vec.is_empty() {
       panic!("Empty one_of_values distribution");
     }
-    
+
     // インデックスを選択して対応する値を返す
     Self::choose(0usize, vec.len() - 1).map(move |idx| vec[idx as usize].clone())
   }
@@ -342,12 +342,12 @@ impl Gens {
     // 文字コードを使用して範囲を計算
     let min_code = min as u32;
     let max_code = max as u32;
-    
+
     // 範囲が無効な場合はエラーを回避
     if min_code > max_code {
       panic!("Invalid char range");
     }
-    
+
     // 文字コードの範囲から選択して文字に変換
     Self::choose_u32(min_code, max_code).map(move |code| std::char::from_u32(code).unwrap_or(min))
   }
@@ -710,18 +710,18 @@ mod tests {
     let chunk_size = 10;
     let gen = Gens::one_i32();
     let chunked_gen = Gens::list_of_n_chunked(n, chunk_size, gen.clone());
-    
+
     let (result, _) = chunked_gen.run(new_rng());
-    
+
     // 結果のサイズが正しいことを確認
     assert_eq!(result.len(), n);
-    
+
     // 大きなチャンクサイズでテスト
     let large_chunk_size = 1000;
     let large_chunked_gen = Gens::list_of_n_chunked(n, large_chunk_size, gen);
-    
+
     let (large_result, _) = large_chunked_gen.run(new_rng());
-    
+
     // 結果のサイズが正しいことを確認
     assert_eq!(large_result.len(), n);
   }
@@ -732,17 +732,17 @@ mod tests {
     let n = 100;
     let gen = Gens::one_i32();
     let lazy_gen = Gens::list_of_n_lazy(n, gen.clone());
-    
+
     let (result, _) = lazy_gen.run(new_rng());
-    
+
     // 結果のサイズが正しいことを確認
     assert_eq!(result.len(), n);
-    
+
     // 通常のlist_of_nと結果を比較
     let normal_gen = Gens::list_of_n(n, gen);
     let (normal_result, _) = normal_gen.run(new_rng().with_seed(42));
     let (lazy_result, _) = Gens::list_of_n_lazy(n, Gens::one_i32()).run(new_rng().with_seed(42));
-    
+
     // 同じシードを使用した場合、結果が同じであることを確認
     assert_eq!(normal_result, lazy_result);
   }
@@ -752,32 +752,32 @@ mod tests {
     init();
     // 大量のデータを生成
     let n = 10000;
-    
+
     // 通常の方法
     let start_time = std::time::Instant::now();
     let gen = Gens::one_i32();
     let normal_gen = Gens::list_of_n(n, gen.clone());
     let (normal_result, _) = normal_gen.run(new_rng());
     let normal_duration = start_time.elapsed();
-    
+
     // チャンク処理を使用
     let start_time = std::time::Instant::now();
     let chunk_size = 1000;
     let chunked_gen = Gens::list_of_n_chunked(n, chunk_size, gen.clone());
     let (chunked_result, _) = chunked_gen.run(new_rng());
     let chunked_duration = start_time.elapsed();
-    
+
     // 遅延評価を使用
     let start_time = std::time::Instant::now();
     let lazy_gen = Gens::list_of_n_lazy(n, gen);
     let (lazy_result, _) = lazy_gen.run(new_rng());
     let lazy_duration = start_time.elapsed();
-    
+
     // 結果のサイズが正しいことを確認
     assert_eq!(normal_result.len(), n);
     assert_eq!(chunked_result.len(), n);
     assert_eq!(lazy_result.len(), n);
-    
+
     // パフォーマンス情報をログに出力
     log::info!("Normal generation time: {:?}", normal_duration);
     log::info!("Chunked generation time: {:?}", chunked_duration);

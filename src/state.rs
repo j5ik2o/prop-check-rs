@@ -121,7 +121,7 @@ where
       let mut s_ = s;
       // 事前に容量を確保
       let mut acc = Vec::with_capacity(sas.len());
-      
+
       // 所有権を移動せずにイテレート
       for x in sas.iter() {
         let (a, s2) = x.clone().run(s_);

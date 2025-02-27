@@ -183,34 +183,34 @@ where
   Prop {
     run_f: Rc::new(RefCell::new(move |max, n, rng| {
       let cases_per_size = n / max;
-      
+
       // 事前に必要な容量を確保してVecを作成
       let mut props = Vec::with_capacity(max as usize);
-      
+
       // イテレータの連鎖を単純なループに置き換え
       for i in 0..max {
         props.push(for_all_gen(gf(i), test()));
       }
-      
+
       // 空の場合は早期リターン
       if props.is_empty() {
         return PropResult::Passed { test_cases: 0 };
       }
-      
+
       // 最初のPropをクローンして取得
       let first_prop = props[0].clone();
       let mut result_prop = Prop::new(move |max, _, rng| first_prop.run(max, cases_per_size, rng));
-      
+
       // 残りのPropsを処理
       for i in 1..props.len() {
         let p = props[i].clone();
         let prop = Prop::new(move |max, _, rng| p.run(max, cases_per_size, rng));
         result_prop = result_prop.and(prop);
       }
-      
+
       // 最終結果を実行
       match result_prop.run(max, n, rng) {
-        _ => PropResult::Proved
+        _ => PropResult::Proved,
       }
     })),
   }
@@ -233,12 +233,12 @@ where
     run_f: Rc::new(RefCell::new(move |_, n, mut rng| {
       // イテレータの連鎖を単純なループに置き換え
       let mut success_count = 1;
-      
+
       for _ in 0..n {
         // テスト値を生成
         let (test_value, new_rng) = g.clone().run(rng);
         rng = new_rng;
-        
+
         // テスト実行
         if !test(test_value.clone()) {
           return PropResult::Falsified {
@@ -246,10 +246,10 @@ where
             successes: success_count,
           };
         }
-        
+
         success_count += 1;
       }
-      
+
       // すべてのテストがパスした場合
       PropResult::Passed { test_cases: n }
     })),
