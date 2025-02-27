@@ -187,7 +187,6 @@ impl NextRandValue for RNG {
 
 impl RNG {
   /// `new` is a constructor.
-  /// `new`はファクトリです。
   pub fn new() -> Self {
     Self {
       rng: Rc::new(RefCell::new(StdRng::seed_from_u64(0))),
@@ -195,14 +194,12 @@ impl RNG {
   }
 
   /// `with_seed` is a constructor with seed.
-  /// `with_seed`はシード値を指定するファクトリです。
   pub fn with_seed(mut self, seed: u64) -> Self {
     self.rng = Rc::new(RefCell::new(StdRng::seed_from_u64(seed)));
     self
   }
 
   /// `i32_f32` generates a tuple of `i32` and `f32`.
-  /// `i32_f32`は`i32`と`f32`のタプルを生成します。
   pub fn i32_f32(&self) -> ((i32, f32), Self) {
     let (i, r1) = self.next_i32();
     let (d, r2) = r1.next_f32();
@@ -210,14 +207,12 @@ impl RNG {
   }
 
   /// `f32_i32` generates a tuple of `f32` and `i32`.
-  /// `f32_i32`は`f32`と`i32`のタプルを生成します。
   pub fn f32_i32(&self) -> ((f32, i32), Self) {
     let ((i, d), r) = self.i32_f32();
     ((d, i), r)
   }
 
   /// `f32_3` generates a tuple of `f32`, `f32` and `f32`.
-  /// `f32_3`は`f32`と`f32`と`f32`のタプルを生成します。
   pub fn f32_3(&self) -> ((f32, f32, f32), Self) {
     let (d1, r1) = self.next_f32();
     let (d2, r2) = r1.next_f32();
@@ -226,7 +221,6 @@ impl RNG {
   }
 
   /// `i32s` generates a vector of `i32` with pre-allocated capacity.
-  /// `i32s`は事前に容量を確保して`i32`のベクタを生成します。
   ///
   /// This method automatically selects the most efficient implementation based on the size:
   /// - For small sizes (< 50,000), it uses a direct StdRng implementation
@@ -242,7 +236,6 @@ impl RNG {
   }
 
   /// `i32s_direct` generates a vector of `i32` using direct StdRng access.
-  /// `i32s_direct`は直接StdRngアクセスを使用して`i32`のベクタを生成します。
   pub fn i32s_direct(&self, count: u32) -> (Vec<i32>, Self) {
     let mut result = Vec::with_capacity(count as usize);
 
@@ -257,7 +250,6 @@ impl RNG {
   }
 
   /// `i32s_parallel` generates a vector of `i32` using parallel processing.
-  /// `i32s_parallel`は並列処理を使用して`i32`のベクタを生成します。
   pub fn i32s_parallel(&self, count: u32) -> (Vec<i32>, Self) {
     use rand::prelude::*;
     use rand::SeedableRng;
@@ -304,7 +296,6 @@ impl RNG {
   }
 
   /// `unit` generates a function that returns a tuple of `A` and `RNG`.
-  /// `unit`は`A`と`RNG`のタプルを返す関数を生成します。
   pub fn unit<A>(a: A) -> Box<dyn FnMut(RNG) -> (A, RNG)>
   where
     A: Clone + 'static, {
@@ -313,7 +304,6 @@ impl RNG {
 
   /// `sequence` generates a function that returns a tuple of `Vec<A>` and `RNG`,
   /// pre-allocating capacity based on the number of functions.
-  /// `sequence`は事前に容量を確保して`Vec<A>`と`RNG`のタプルを返す関数を生成します。
   pub fn sequence<A, F>(fs: Vec<F>) -> Box<dyn FnMut(RNG) -> (Vec<A>, RNG)>
   where
     A: Clone + 'static,
@@ -331,19 +321,16 @@ impl RNG {
   }
 
   /// `int_value` generates a function that returns a tuple of `i32` and `RNG`.
-  /// `int_value`は`i32`と`RNG`のタプルを返す関数を生成します。
   pub fn int_value() -> Box<dyn FnMut(RNG) -> (i32, RNG)> {
     Box::new(move |rng| rng.next_i32())
   }
 
   /// `double_value` generates a function that returns a tuple of `f32` and `RNG`.
-  /// `double_value`は`f32`と`RNG`のタプルを返す関数を生成します。
   pub fn double_value() -> Box<dyn FnMut(RNG) -> (f32, RNG)> {
     Box::new(move |rng| rng.next_f32())
   }
 
   /// `map` generates a function that returns a tuple of `B` and `RNG`.
-  /// `map`は`B`と`RNG`のタプルを返す関数を生成します。
   pub fn map<A, B, F1, F2>(mut s: F1, mut f: F2) -> Box<dyn FnMut(RNG) -> (B, RNG)>
   where
     F1: FnMut(RNG) -> (A, RNG) + 'static,
@@ -355,7 +342,6 @@ impl RNG {
   }
 
   /// `map2` generates a function that returns a tuple of `C` and `RNG`.
-  /// `map2`は`C`と`RNG`のタプルを返す関数を生成します。
   pub fn map2<F1, F2, F3, A, B, C>(mut ra: F1, mut rb: F2, mut f: F3) -> Box<dyn FnMut(RNG) -> (C, RNG)>
   where
     F1: FnMut(RNG) -> (A, RNG) + 'static,
@@ -369,7 +355,6 @@ impl RNG {
   }
 
   /// `both` generates a function that returns a tuple of `(A, B)` and `RNG`.
-  /// `both`は`(A, B)`と`RNG`のタプルを返す関数を生成します。
   pub fn both<F1, F2, A, B>(ra: F1, rb: F2) -> Box<dyn FnMut(RNG) -> ((A, B), RNG)>
   where
     F1: FnMut(RNG) -> (A, RNG) + 'static,
@@ -378,19 +363,16 @@ impl RNG {
   }
 
   /// `rand_int_double` generates a function that returns a tuple of `(i32, f32)` and `RNG`.
-  /// `rand_int_double`は`(i32, f32)`と`RNG`のタプルを返す関数を生成します。
   pub fn rand_int_double() -> Box<dyn FnMut(RNG) -> ((i32, f32), RNG)> {
     Self::both(Self::int_value(), Self::double_value())
   }
 
   /// `rand_double_int` generates a function that returns a tuple of `(f32, i32)` and `RNG`.
-  /// `rand_double_int`は`(f32, i32)`と`RNG`のタプルを返す関数を生成します。
   pub fn rand_double_int() -> Box<dyn FnMut(RNG) -> ((f32, i32), RNG)> {
     Self::both(Self::double_value(), Self::int_value())
   }
 
   /// `flat_map` generates a function that returns a tuple of `B` and `RNG`.
-  /// `flat_map`は`B`と`RNG`のタプルを返す関数を生成します。
   pub fn flat_map<A, B, F, GF, BF>(mut f: F, mut g: GF) -> Box<dyn FnMut(RNG) -> (B, RNG)>
   where
     F: FnMut(RNG) -> (A, RNG) + 'static,

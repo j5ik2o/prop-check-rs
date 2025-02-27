@@ -11,8 +11,7 @@ pub type TestCases = u32;
 pub type FailedCase = String;
 pub type SuccessCount = u32;
 
-/// The trait to return the failure of the property.<br/>
-/// プロパティの失敗を返すためのトレイト.
+/// The trait to return the failure of the property.
 pub trait IsFalsified {
   fn is_falsified(&self) -> bool;
   fn non_falsified(&self) -> bool {
@@ -20,8 +19,7 @@ pub trait IsFalsified {
   }
 }
 
-/// Represents the result of the property.<br/>
-/// プロパティの結果を表す.
+/// Represents the result of the property.
 #[derive(Clone)]
 pub enum PropResult {
   /// The property is passed.
@@ -40,8 +38,7 @@ pub enum PropResult {
 }
 
 impl PropResult {
-  /// The `map` method can change the number of test cases.<br/>
-  /// mapメソッドはテストケースの数を変更することができる.
+  /// The `map` method can change the number of test cases.
   ///
   /// # Arguments
   /// - `f` - The function to change the number of test cases.
@@ -60,8 +57,7 @@ impl PropResult {
     }
   }
 
-  /// The `flat_map` method can change the number of test cases.<br/>
-  /// flat_mapメソッドはテストケースの数を変更することができる.
+  /// The `flat_map` method can change the number of test cases.
   ///
   /// # Arguments
   /// - `f` - The function to change the number of test cases.
@@ -78,8 +74,7 @@ impl PropResult {
     }
   }
 
-  /// The `to_result` method can convert the PropResult to Result.<br/>
-  /// to_resultメソッドはPropResultをResultに変換することができる.
+  /// The `to_result` method can convert the PropResult to Result.
   ///
   /// # Returns
   /// - `Result<String>` - The result of the PropResult.
@@ -91,8 +86,7 @@ impl PropResult {
     }
   }
 
-  /// The `to_result_unit` method can convert the PropResult to Result with the message.<br/>
-  /// to_result_unitメソッドはPropResultをResultに変換することができる.
+  /// The `to_result_unit` method can convert the PropResult to Result with the message.
   ///
   /// # Returns
   /// - `Result<()>` - The result without the message of the PropResult
@@ -109,8 +103,7 @@ impl PropResult {
       })
   }
 
-  /// The `message` method can return the message of the PropResult.<br/>
-  /// messageメソッドはPropResultのメッセージを返すことができる。
+  /// The `message` method can return the message of the PropResult.
   ///
   /// # Returns
   /// - `String` - The message of the PropResult.
@@ -145,8 +138,7 @@ where
   })
 }
 
-/// Returns a Prop that executes a function to evaluate properties using SGen.<br/>
-/// SGenを利用してプロパティを評価するため関数を実行するPropを返す。
+/// Returns a Prop that executes a function to evaluate properties using SGen.
 ///
 /// # Arguments
 /// - `sgen` - The SGen.
@@ -165,8 +157,7 @@ where
   }
 }
 
-/// Returns a Prop that executes a function to evaluate properties using Gen with size.<br/>
-/// サイズを与えたGenを利用してプロパティを評価するため関数を実行するPropを返す。
+/// Returns a Prop that executes a function to evaluate properties using Gen with size.
 ///
 /// # Arguments
 /// - `gf` - The function to create a Gen with size.
@@ -216,8 +207,7 @@ where
   }
 }
 
-/// Returns a Prop that executes a function to evaluate properties using Gen.<br/>
-/// Genを利用してプロパティを評価するため関数を実行するPropを返す
+/// Returns a Prop that executes a function to evaluate properties using Gen.
 ///
 /// # Arguments
 /// - `g` - The Gen.
