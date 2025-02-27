@@ -129,7 +129,7 @@ mod tests {
     init();
     let gen = <i64 as One>::one();
     let (value, _) = gen.run(new_rng());
-    assert!(value.is_i64());
+    assert!(value >= i64::MIN && value <= i64::MAX);
   }
 
   #[test]
