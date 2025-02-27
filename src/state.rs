@@ -119,10 +119,12 @@ where
   pub fn sequence(sas: Vec<State<S, A>>) -> State<S, Vec<A>> {
     Self::new(move |s| {
       let mut s_ = s;
-      let actions = sas.clone();
-      let mut acc: Vec<A> = vec![];
-      for x in actions.into_iter() {
-        let (a, s2) = x.run(s_);
+      // 事前に容量を確保
+      let mut acc = Vec::with_capacity(sas.len());
+      
+      // 所有権を移動せずにイテレート
+      for x in sas.iter() {
+        let (a, s2) = x.clone().run(s_);
         s_ = s2;
         acc.push(a);
       }

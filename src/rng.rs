@@ -187,17 +187,80 @@ impl RNG {
 
     /// `i32s` generates a vector of `i32` with pre-allocated capacity.
     /// `i32s`は事前に容量を確保して`i32`のベクタを生成します。
-    pub fn i32s(self, count: u32) -> (Vec<i32>, Self) {
-        let mut index = count;
-        let mut acc = Vec::with_capacity(count as usize);
-        let mut current_rng = self;
-        while index > 0 {
-            let (x, new_rng) = current_rng.next_i32();
-            acc.push(x);
-            index -= 1;
-            current_rng = new_rng;
+    ///
+    /// This method automatically selects the most efficient implementation based on the size:
+    /// - For small sizes (< 50,000), it uses a direct StdRng implementation
+    /// - For large sizes (>= 50,000), it uses parallel processing
+    pub fn i32s(&self, count: u32) -> (Vec<i32>, Self) {
+        // 大きいサイズの場合は並列処理を使用
+        if count >= 50_000 {
+            return self.i32s_parallel(count);
         }
-        (acc, current_rng)
+        
+        // 小さいサイズの場合は直接StdRngを使用
+        self.i32s_direct(count)
+    }
+    
+    /// `i32s_direct` generates a vector of `i32` using direct StdRng access.
+    /// `i32s_direct`は直接StdRngアクセスを使用して`i32`のベクタを生成します。
+    pub fn i32s_direct(&self, count: u32) -> (Vec<i32>, Self) {
+        let mut result = Vec::with_capacity(count as usize);
+        
+        {
+            let mut rng_inner = self.rng.borrow_mut();
+            for _ in 0..count {
+                result.push(rng_inner.random::<i32>());
+            }
+        }
+        
+        (result, self.clone())
+    }
+    
+    /// `i32s_parallel` generates a vector of `i32` using parallel processing.
+    /// `i32s_parallel`は並列処理を使用して`i32`のベクタを生成します。
+    pub fn i32s_parallel(&self, count: u32) -> (Vec<i32>, Self) {
+        use rand::prelude::*;
+        use rand::SeedableRng;
+        use std::sync::{Arc, Mutex};
+        use std::thread;
+        
+        let num_threads = num_cpus::get().min(8); // スレッド数を制限
+        let chunk_size = count / num_threads as u32;
+        let remainder = count % num_threads as u32;
+        
+        let result = Arc::new(Mutex::new(Vec::with_capacity(count as usize)));
+        
+        let mut handles = vec![];
+        
+        for i in 0..num_threads {
+            let result_clone = Arc::clone(&result);
+            let mut thread_count = chunk_size;
+            
+            // 最後のスレッドに余りを追加
+            if i == num_threads - 1 {
+                thread_count += remainder;
+            }
+            
+            let handle = thread::spawn(move || {
+                let mut rng = StdRng::seed_from_u64(i as u64); // 各スレッドで異なるシード
+                let mut local_result = Vec::with_capacity(thread_count as usize);
+                
+                for _ in 0..thread_count {
+                    local_result.push(rng.random::<i32>());
+                }
+                
+                let mut result = result_clone.lock().unwrap();
+                result.extend(local_result);
+            });
+            
+            handles.push(handle);
+        }
+        
+        for handle in handles {
+            handle.join().unwrap();
+        }
+        
+        (Arc::try_unwrap(result).unwrap().into_inner().unwrap(), self.clone())
     }
 
     /// `unit` generates a function that returns a tuple of `A` and `RNG`.
