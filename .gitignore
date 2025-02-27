@@ -5,3 +5,6 @@ target
 
 .idea/
 *.iml
+
+# Tarpaulin coverage reports
+tarpaulin-report.html

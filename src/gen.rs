@@ -231,7 +231,7 @@ impl Gens {
   /// u32型の値を一つ返すGenを生成します。
   pub fn one_u32() -> Gen<u32> {
     Gen {
-      sample: State::<RNG, u16>::new(move |rng: RNG| rng.next_u32()),
+      sample: State::<RNG, u32>::new(move |rng: RNG| rng.next_u32()),
     }
   }
 
@@ -247,7 +247,7 @@ impl Gens {
   /// u16型の値を一つ返すGenを生成します。
   pub fn one_u16() -> Gen<u16> {
     Gen {
-      sample: State::<RNG, u32>::new(move |rng: RNG| rng.next_u16()),
+      sample: State::<RNG, u16>::new(move |rng: RNG| rng.next_u16()),
     }
   }
 
@@ -355,10 +355,23 @@ impl Gens {
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i64.<br/>
   /// i64型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
   pub fn choose_i64(min: i64, max: i64) -> Gen<i64> {
-    Gen {
-      sample: State::<RNG, i64>::new(move |rng: RNG| rng.next_i64()),
+    if min > max {
+      panic!("Invalid range: min > max");
     }
-    .map(move |n| min + n % (max - min + 1))
+
+    // 範囲の大きさを計算
+    let range = max - min + 1;
+
+    // オーバーフローを防ぐために絶対値を使用
+    Gen {
+      sample: State::<RNG, i64>::new(move |rng: RNG| {
+        let (n, new_rng) = rng.next_i64();
+        // 負の値を正の値に変換し、範囲内に収める
+        let abs_n = if n < 0 { -n } else { n };
+        let value = min + (abs_n % range);
+        (value, new_rng)
+      }),
+    }
   }
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u64.<br/>
@@ -373,7 +386,23 @@ impl Gens {
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i32.<br/>
   /// i32型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
   pub fn choose_i32(min: i32, max: i32) -> Gen<i32> {
-    Gen::<i32>::new(State::<RNG, i32>::new(move |rng: RNG| rng.next_i32())).map(move |n| min + n % (max - min + 1))
+    if min > max {
+      panic!("Invalid range: min > max");
+    }
+
+    // 範囲の大きさを計算
+    let range = max - min + 1;
+
+    // オーバーフローを防ぐために絶対値を使用
+    Gen {
+      sample: State::<RNG, i32>::new(move |rng: RNG| {
+        let (n, new_rng) = rng.next_i32();
+        // 負の値を正の値に変換し、範囲内に収める
+        let abs_n = if n < 0 { -n } else { n };
+        let value = min + (abs_n % range);
+        (value, new_rng)
+      }),
+    }
   }
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type u32.<br/>
@@ -451,7 +480,7 @@ impl Gens {
         stop_exclusive
       },
     )
-    .map(move |n| if n % two == T::zero() { n + T::one() } else { n })
+    .map(move |n| if n % two != T::zero() { n + T::one() } else { n })
   }
 
   /// Generates a Gen that returns one randomly selected odd number from a specified range of values.<br/>
@@ -466,7 +495,7 @@ impl Gens {
         stop_exclusive
       },
     )
-    .map(move |n| if n % two != T::zero() { n + T::one() } else { n })
+    .map(move |n| if n % two == T::zero() { n + T::one() } else { n })
   }
 }
 
