@@ -2,9 +2,9 @@ use crate::gen::{Gen, SGen};
 use crate::rng::RNG;
 
 use anyhow::*;
-use itertools::Unfold;
 use std::cell::RefCell;
 use std::fmt::Debug;
+use std::iter::FromFn;
 use std::rc::Rc;
 
 pub type MaxSize = u32;
@@ -136,17 +136,14 @@ impl IsFalsified for PropResult {
   }
 }
 
-fn random_stream<A>(g: Gen<A>, rng: RNG) -> Unfold<RNG, Box<dyn FnMut(&mut RNG) -> Option<A>>>
+fn random_stream<A>(g: Gen<A>, mut rng: RNG) -> impl Iterator<Item = A>
 where
   A: Clone + 'static, {
-  itertools::unfold(
-    rng,
-    Box::new(move |rng| {
-      let (a, s) = g.clone().run(rng.clone());
-      *rng = s;
-      Some(a)
-    }),
-  )
+  std::iter::from_fn(move || {
+    let (a, new_rng) = g.clone().run(rng.clone());
+    rng = new_rng;
+    Some(a)
+  })
 }
 
 /// Returns a Prop that executes a function to evaluate properties using SGen.<br/>
