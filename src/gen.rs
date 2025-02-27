@@ -353,7 +353,6 @@ impl Gens {
   }
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i64.<br/>
-  /// i64型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
   ///
   /// # Arguments
   /// * `min` - The minimum value (inclusive) of the range
@@ -394,7 +393,6 @@ impl Gens {
   }
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type i32.<br/>
-  /// i32型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
   ///
   /// # Arguments
   /// * `min` - The minimum value (inclusive) of the range
@@ -471,7 +469,6 @@ impl Gens {
   }
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type f64.<br/>
-  /// f64型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
   ///
   /// # Arguments
   /// * `min` - The minimum value (inclusive) of the range
@@ -490,7 +487,6 @@ impl Gens {
   }
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type f32.<br/>
-  /// f32型の指定された最大・最小の範囲からランダムに一つ選択した値を返すGenを生成します。
   ///
   /// # Arguments
   /// * `min` - The minimum value (inclusive) of the range

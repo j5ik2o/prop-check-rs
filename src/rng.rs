@@ -45,8 +45,7 @@ where
     (if i < 0 { -(i + 1) as u8 } else { i as u8 }, r)
   }
 
-  /// `next_f64` generates an `f64` in the range [0.0, 1.0) and an updated instance of Self.<br/>
-  /// `next_f64`は0.0以上1.0未満の範囲の`f64`と更新されたSelfを生成します。
+  /// Generates an `f64` in the range [0.0, 1.0) and an updated instance of Self.<br/>
   ///
   /// # Returns
   /// * A tuple containing:
@@ -63,8 +62,7 @@ where
     (normalized, r)
   }
 
-  /// `next_f32` generates an `f32` in the range [0.0, 1.0) and an updated instance of Self.<br/>
-  /// `next_f32`は0.0以上1.0未満の範囲の`f32`と更新されたSelfを生成します。
+  /// Generates an `f32` in the range [0.0, 1.0) and an updated instance of Self.<br/>
   ///
   /// # Returns
   /// * A tuple containing:
