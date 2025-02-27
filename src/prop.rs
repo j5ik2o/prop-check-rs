@@ -184,9 +184,8 @@ where
   Prop {
     run_f: Rc::new(RefCell::new(move |max, n, rng| {
       let cases_per_size = n / max;
-      let props = itertools::iterate(0, |i| *i + 1)
+      let props = (0..max)
         .map(|i| for_all_gen(gf(i), test()))
-        .take(max as usize)
         .collect::<Vec<_>>();
       let p = props
         .into_iter()
@@ -213,7 +212,7 @@ where
   A: Clone + Debug + 'static, {
   Prop {
     run_f: Rc::new(RefCell::new(move |_, n, rng| {
-      let success_counter = itertools::iterate(1, |&i| i + 1).into_iter();
+      let success_counter = 1..;
       random_stream(g.clone(), rng)
         .zip(success_counter)
         .take(n as usize)
