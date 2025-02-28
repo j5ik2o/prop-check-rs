@@ -1,12 +1,10 @@
 use crate::gen::{Gen, Gens};
 
-/// Trait for types that can be randomly chosen from a range.<br/>
-/// 範囲からランダムに選択できる型のトレイト。
+/// Trait for types that can be randomly chosen from a range.
 pub trait Choose
 where
   Self: Sized, {
-  /// Choose a random value between min and max (inclusive).<br/>
-  /// min以上max以下のランダムな値を選択する。
+  /// Choose a random value between min and max (inclusive).
   ///
   /// # Arguments
   /// * `min` - The minimum value (inclusive).
@@ -21,8 +19,7 @@ impl<A> Choose for Option<A>
 where
   A: Choose + Clone + 'static,
 {
-  /// Choose a random value between min and max for Option types.<br/>
-  /// Option型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random value between min and max for Option types.
   ///
   /// # Arguments
   /// * `min` - The minimum value (inclusive).
@@ -45,8 +42,7 @@ where
   A: Choose + Clone + 'static,
   B: Clone + 'static,
 {
-  /// Choose a random value between min and max for Result types.<br/>
-  /// Result型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random value between min and max for Result types.
   ///
   /// # Arguments
   /// * `min` - The minimum value (inclusive).
@@ -65,96 +61,84 @@ where
 }
 
 impl Choose for usize {
-  /// Choose a random usize value between min and max.<br/>
-  /// usize型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random usize value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_u64(min as u64, max as u64).map(|v| v as usize)
   }
 }
 
 impl Choose for i64 {
-  /// Choose a random i64 value between min and max.<br/>
-  /// i64型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random i64 value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_i64(min, max)
   }
 }
 
 impl Choose for u64 {
-  /// Choose a random u64 value between min and max.<br/>
-  /// u64型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random u64 value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_u64(min, max)
   }
 }
 
 impl Choose for i32 {
-  /// Choose a random i32 value between min and max.<br/>
-  /// i32型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random i32 value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_i32(min, max)
   }
 }
 
 impl Choose for u32 {
-  /// Choose a random u32 value between min and max.<br/>
-  /// u32型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random u32 value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_u32(min, max)
   }
 }
 
 impl Choose for i16 {
-  /// Choose a random i16 value between min and max.<br/>
-  /// i16型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random i16 value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_i16(min, max)
   }
 }
 
 impl Choose for u16 {
-  /// Choose a random u16 value between min and max.<br/>
-  /// u16型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random u16 value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_u16(min, max)
   }
 }
 
 impl Choose for i8 {
-  /// Choose a random i8 value between min and max.<br/>
-  /// i8型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random i8 value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_i8(min, max)
   }
 }
 
 impl Choose for u8 {
-  /// Choose a random u8 value between min and max.<br/>
-  /// u8型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random u8 value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_u8(min, max)
   }
 }
 
 impl Choose for char {
-  /// Choose a random char value between min and max.<br/>
-  /// char型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random char value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_char(min, max)
   }
 }
 
 impl Choose for f64 {
-  /// Choose a random f64 value between min and max.<br/>
-  /// f64型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random f64 value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_f64(min, max)
   }
 }
 
 impl Choose for f32 {
-  /// Choose a random f32 value between min and max.<br/>
-  /// f32型の場合、min以上max以下のランダムな値を選択する。
+  /// Choose a random f32 value between min and max.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     Gens::choose_f32(min, max)
   }
@@ -178,16 +162,16 @@ mod tests {
   #[test]
   fn test_choose_option() {
     init();
-    // Some値の場合
+    // For Some value
     let gen = Option::<i32>::choose(Some(1), Some(10));
-    let (value, _) = gen.run(new_rng().with_seed(42)); // 固定シードを使用
+    let (value, _) = gen.run(new_rng().with_seed(42)); // Using fixed seed
     assert!(value.is_some());
     if let Some(v) = value {
-      // 範囲チェックを緩和
-      assert!(v >= 1 && v <= 100, "値が範囲外です: {}", v);
+      // Relaxed range check
+      assert!(v >= 1 && v <= 100, "Value out of range: {}", v);
     }
 
-    // None値の場合
+    // For None value
     let gen = Option::<i32>::choose(None, Some(10));
     let (value, _) = gen.run(new_rng());
     assert!(value.is_none());
@@ -196,16 +180,16 @@ mod tests {
   #[test]
   fn test_choose_result() {
     init();
-    // Ok値の場合
+    // For Ok value
     let gen = Result::<i32, String>::choose(Ok(1), Ok(10));
-    let (value, _) = gen.run(new_rng().with_seed(42)); // 固定シードを使用
+    let (value, _) = gen.run(new_rng().with_seed(42)); // Using fixed seed
     assert!(value.is_ok());
     if let Ok(v) = value {
-      // 範囲チェックを緩和
-      assert!(v >= 1 && v <= 100, "値が範囲外です: {}", v);
+      // Relaxed range check
+      assert!(v >= 1 && v <= 100, "Value out of range: {}", v);
     }
 
-    // Err値の場合
+    // For Err value
     let error = "error".to_string();
     let gen = Result::<i32, String>::choose(Err(error.clone()), Ok(10));
     let (value, _) = gen.run(new_rng());

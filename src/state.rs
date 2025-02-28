@@ -29,31 +29,97 @@ where
   S: 'static,
   A: Clone + 'static,
 {
-  /// Create a new State with a value.
+  /// Creates a new State with a constant value.
+  ///
+  /// This method creates a State that, when run, will return the provided value
+  /// and the unchanged state.
+  ///
+  /// # Arguments
+  /// - `a` - The value to be returned by the State
+  ///
+  /// # Returns
+  /// - `State<S, A>` - A new State that returns the provided value
+  ///
+  /// # Examples
+  /// ```
+  /// use prop_check_rs::state::State;
+  /// let state = State::<i32, String>::value("hello".to_string());
+  /// let (value, new_state) = state.run(42);
+  /// assert_eq!(value, "hello");
+  /// assert_eq!(new_state, 42); // State is unchanged
+  /// ```
   pub fn value(a: A) -> State<S, A> {
     Self::new(move |s| (a.clone(), s))
   }
 
-  /// Create a new State.
+  /// Creates a new State with a custom state transformation function.
+  ///
+  /// This is the core constructor for State, allowing you to define exactly how
+  /// the state should be transformed and what value should be produced.
+  ///
+  /// # Arguments
+  /// - `f` - A function that takes a state and returns a tuple of (value, new_state)
+  ///
+  /// # Returns
+  /// - `State<T, B>` - A new State that applies the provided function
+  ///
+  /// # Type Parameters
+  /// - `T` - The type of the state
+  /// - `B` - The type of the value produced
+  /// - `F` - The type of the function
   pub fn new<T, B, F>(f: F) -> State<T, B>
   where
     F: Fn(T) -> (B, T) + 'static, {
     State { run_f: Rc::new(f) }
   }
 
-  /// Alias for Self::value.
+  /// Creates a new State with a constant value (alias for value).
+  ///
+  /// This method is functionally identical to `value` but is named to align with
+  /// the functional programming concept of "pure" or "return".
+  ///
+  /// # Arguments
+  /// - `b` - The value to be returned by the State
+  ///
+  /// # Returns
+  /// - `State<S, B>` - A new State that returns the provided value
+  ///
+  /// # Type Parameters
+  /// - `B` - The type of the value to be returned
   pub fn pure<B>(b: B) -> State<S, B>
   where
     B: Clone + 'static, {
     Self::new(move |s| (b.clone(), s))
   }
 
-  /// Run the State.
+  /// Executes the State with the provided initial state.
+  ///
+  /// This method runs the State computation with the given state and returns
+  /// both the resulting value and the final state.
+  ///
+  /// # Arguments
+  /// - `s` - The initial state
+  ///
+  /// # Returns
+  /// - `(A, S)` - A tuple containing the resulting value and the final state
   pub fn run(self, s: S) -> (A, S) {
     (self.run_f)(s)
   }
 
-  /// Map the State.
+  /// Transforms the value produced by this State using a function.
+  ///
+  /// This method allows you to transform the value produced by a State without
+  /// affecting how the state itself is transformed.
+  ///
+  /// # Arguments
+  /// - `f` - A function that transforms the value
+  ///
+  /// # Returns
+  /// - `State<S, B>` - A new State that produces the transformed value
+  ///
+  /// # Type Parameters
+  /// - `B` - The type of the transformed value
+  /// - `F` - The type of the transformation function
   pub fn map<B, F>(self, f: F) -> State<S, B>
   where
     F: Fn(A) -> B + 'static,
@@ -61,7 +127,21 @@ where
     self.flat_map(move |a| Self::pure(f(a)))
   }
 
-  /// FlatMap the State.
+  /// Chains this State with a function that returns another State.
+  ///
+  /// This method allows for sequential composition of stateful computations.
+  /// The function `f` is applied to the value produced by this State, and the
+  /// resulting State is then run with the updated state.
+  ///
+  /// # Arguments
+  /// - `f` - A function that takes the value from this State and returns a new State
+  ///
+  /// # Returns
+  /// - `State<S, B>` - A new State representing the sequential composition
+  ///
+  /// # Type Parameters
+  /// - `B` - The type of the value produced by the resulting State
+  /// - `F` - The type of the function
   pub fn flat_map<B, F>(self, f: F) -> State<S, B>
   where
     F: Fn(A) -> State<S, B> + 'static,
@@ -72,7 +152,19 @@ where
     })
   }
 
-  /// Compose two States.
+  /// Combines this State with another State, producing both values.
+  ///
+  /// This method runs this State, then runs the provided State with the
+  /// updated state, and returns both values as a tuple.
+  ///
+  /// # Arguments
+  /// - `sb` - Another State to run after this one
+  ///
+  /// # Returns
+  /// - `State<S, (A, B)>` - A new State that produces both values as a tuple
+  ///
+  /// # Type Parameters
+  /// - `B` - The type of the value produced by the second State
   pub fn and_then<B>(self, sb: State<S, B>) -> State<S, (A, B)>
   where
     A: Clone,
@@ -80,21 +172,53 @@ where
     self.flat_map(move |a| sb.clone().flat_map(move |b| Self::pure((a.clone(), b))))
   }
 
-  /// Get the state.
+  /// Creates a State that returns the current state as its value.
+  ///
+  /// This method is useful for accessing the current state without modifying it.
+  ///
+  /// # Returns
+  /// - `State<T, T>` - A State that returns the current state as its value
+  ///
+  /// # Type Parameters
+  /// - `T` - The type of the state
   pub fn get<T>() -> State<T, T>
   where
     T: Clone, {
     Self::new(move |t: T| (t.clone(), t))
   }
 
-  /// Set the state.
+  /// Creates a State that replaces the current state with a new value.
+  ///
+  /// This method is useful for setting the state to a specific value,
+  /// regardless of its current value.
+  ///
+  /// # Arguments
+  /// - `t` - The new state value
+  ///
+  /// # Returns
+  /// - `State<T, ()>` - A State that sets the state to the provided value
+  ///
+  /// # Type Parameters
+  /// - `T` - The type of the state
   pub fn set<T>(t: T) -> State<T, ()>
   where
     T: Clone + 'static, {
     Self::new(move |_| ((), t.clone()))
   }
 
-  /// Modify the state by applying a function.
+  /// Creates a State that modifies the current state using a function.
+  ///
+  /// This method allows you to transform the state based on its current value.
+  ///
+  /// # Arguments
+  /// - `f` - A function that transforms the state
+  ///
+  /// # Returns
+  /// - `State<T, ()>` - A State that modifies the state using the provided function
+  ///
+  /// # Type Parameters
+  /// - `T` - The type of the state
+  /// - `F` - The type of the transformation function
   pub fn modify<T, F>(f: F) -> State<T, ()>
   where
     F: Fn(T) -> T + 'static,
@@ -103,14 +227,23 @@ where
     s.flat_map(move |t: T| Self::set(f(t)))
   }
 
-  /// Execute the State and return a State with the result in the collection.
+  /// Executes a sequence of States and collects their results into a vector.
+  ///
+  /// This method runs each State in the provided vector in sequence, threading
+  /// the state through each computation, and collects all the resulting values.
+  ///
+  /// # Arguments
+  /// - `sas` - A vector of States to execute in sequence
+  ///
+  /// # Returns
+  /// - `State<S, Vec<A>>` - A State that produces a vector of all the values
   pub fn sequence(sas: Vec<State<S, A>>) -> State<S, Vec<A>> {
     Self::new(move |s| {
       let mut s_ = s;
-      // 事前に容量を確保
+      // Pre-allocate capacity
       let mut acc = Vec::with_capacity(sas.len());
 
-      // 所有権を移動せずにイテレート
+      // Iterate without moving ownership
       for x in sas.iter() {
         let (a, s2) = x.clone().run(s_);
         s_ = s2;

@@ -6,3 +6,18 @@
 - モジュールは2018方式を採用してください
 - オブジェクト間の循環参照は避けてください
 - rustdocは英語で記述する
+  - rustdocがないものは新規に追加する。既存のrustdocでも以下に該当しないものは是正すること
+  - コードを見れば分かることは書かない。Why/Why notを中心に記載すること
+  - タイトル, 型引数, 引数, 戻り値, パニック, その他注意事項など
+  - 書き方は以下を参考にする。項目の順番は統一すること。
+  ```rust
+  /// Execute the Prop.
+  ///
+  /// # Arguments
+  /// - `max_size` - The maximum size of the generated value.
+  /// - `test_cases` - The number of test cases.
+  /// - `rng` - The random number generator.
+  ///
+  /// # Returns
+  /// - `PropResult` - The result of the Prop.
+  ```

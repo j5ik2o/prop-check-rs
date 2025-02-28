@@ -175,31 +175,31 @@ where
     run_f: Rc::new(RefCell::new(move |max, n, rng| {
       let cases_per_size = n / max;
 
-      // 事前に必要な容量を確保してVecを作成
+      // Create a Vec with pre-allocated capacity
       let mut props = Vec::with_capacity(max as usize);
 
-      // イテレータの連鎖を単純なループに置き換え
+      // Replace iterator chains with a simple loop
       for i in 0..max {
         props.push(for_all_gen(gf(i), test()));
       }
 
-      // 空の場合は早期リターン
+      // Early return if empty
       if props.is_empty() {
         return PropResult::Passed { test_cases: 0 };
       }
 
-      // 最初のPropをクローンして取得
+      // Clone and get the first Prop
       let first_prop = props[0].clone();
       let mut result_prop = Prop::new(move |max, _, rng| first_prop.run(max, cases_per_size, rng));
 
-      // 残りのPropsを処理
+      // Process the remaining Props
       for i in 1..props.len() {
         let p = props[i].clone();
         let prop = Prop::new(move |max, _, rng| p.run(max, cases_per_size, rng));
         result_prop = result_prop.and(prop);
       }
 
-      // 最終結果を実行
+      // Execute the final result
       match result_prop.run(max, n, rng) {
         _ => PropResult::Proved,
       }
@@ -221,15 +221,15 @@ where
   A: Clone + Debug + 'static, {
   Prop {
     run_f: Rc::new(RefCell::new(move |_, n, mut rng| {
-      // イテレータの連鎖を単純なループに置き換え
+      // Replace iterator chains with a simple loop
       let mut success_count = 1;
 
       for _ in 0..n {
-        // テスト値を生成
+        // Generate test value
         let (test_value, new_rng) = g.clone().run(rng);
         rng = new_rng;
 
-        // テスト実行
+        // Execute test
         if !test(test_value.clone()) {
           return PropResult::Falsified {
             failure: format!("{:?}", test_value),
@@ -240,7 +240,7 @@ where
         success_count += 1;
       }
 
-      // すべてのテストがパスした場合
+      // If all tests pass
       PropResult::Passed { test_cases: n }
     })),
   }
@@ -272,8 +272,7 @@ pub fn test_with_prop(p: Prop, max_size: MaxSize, test_cases: TestCases, rng: RN
   p.run(max_size, test_cases, rng).to_result_unit()
 }
 
-/// Represents the property.<br/>
-/// プロパティを表す。
+/// Represents the property.
 pub struct Prop {
   run_f: Rc<RefCell<dyn FnMut(MaxSize, TestCases, RNG) -> PropResult>>,
 }
@@ -489,7 +488,7 @@ mod tests {
   #[test]
   fn test_for_all_gen() {
     init();
-    // 常に成功するプロパティ
+    // Property that always succeeds
     let gen = Gens::choose_i32(1, 100);
     let prop = for_all_gen(gen.clone(), |_| true);
     let result = prop.run(1, 10, new_rng());
@@ -498,7 +497,7 @@ mod tests {
       _ => panic!("Expected PropResult::Passed"),
     }
 
-    // 常に失敗するプロパティ
+    // Property that always fails
     let prop = for_all_gen(gen, |_| false);
     let result = prop.run(1, 10, new_rng());
     assert!(result.is_falsified());
@@ -507,7 +506,7 @@ mod tests {
   #[test]
   fn test_for_all_sgen() {
     init();
-    // 常に成功するプロパティ
+    // Property that always succeeds
     let gen = Gens::choose_i32(1, 100);
     let sgen = crate::gen::SGen::Unsized(gen.clone());
     let prop = for_all_sgen(sgen, || |_| true);
@@ -521,7 +520,7 @@ mod tests {
   #[test]
   fn test_prop_and() {
     init();
-    // 両方成功するプロパティ
+    // Properties that both succeed
     let gen1 = Gens::choose_i32(1, 100);
     let gen2 = Gens::choose_i32(1, 100);
     let prop1 = for_all_gen(gen1, |_| true);
@@ -533,7 +532,7 @@ mod tests {
       _ => panic!("Expected PropResult::Passed"),
     }
 
-    // 最初が失敗するプロパティ
+    // Property where the first one fails
     let gen1 = Gens::choose_i32(1, 100);
     let gen2 = Gens::choose_i32(1, 100);
     let prop1 = for_all_gen(gen1, |_| false);
@@ -546,7 +545,7 @@ mod tests {
   #[test]
   fn test_prop_or() {
     init();
-    // 両方成功するプロパティ
+    // Properties that both succeed
     let gen1 = Gens::choose_i32(1, 100);
     let gen2 = Gens::choose_i32(1, 100);
     let prop1 = for_all_gen(gen1, |_| true);
@@ -558,7 +557,7 @@ mod tests {
       _ => panic!("Expected PropResult::Passed"),
     }
 
-    // 最初が失敗するプロパティ
+    // Property where the first one fails
     let gen1 = Gens::choose_i32(1, 100);
     let gen2 = Gens::choose_i32(1, 100);
     let prop1 = for_all_gen(gen1, |_| false);
@@ -570,7 +569,7 @@ mod tests {
       _ => panic!("Expected PropResult::Passed"),
     }
 
-    // 両方失敗するプロパティ
+    // Properties that both fail
     let gen1 = Gens::choose_i32(1, 100);
     let gen2 = Gens::choose_i32(1, 100);
     let prop1 = for_all_gen(gen1, |_| false);

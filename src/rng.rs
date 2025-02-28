@@ -4,12 +4,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 /// The trait to generate random values.
-/// ランダムな値を生成するためのトレイトです。
 pub trait NextRandValue
 where
   Self: Sized, {
   /// `next_i64` generates an `i64` and an updated instance of Self.
-  /// `next_i64`は`i64`と更新されたSelfを生成します。
   fn next_i64(&self) -> (i64, Self);
 
   /// `next_u64` generates a `u64` and an updated instance of Self.
@@ -45,7 +43,7 @@ where
     (if i < 0 { -(i + 1) as u8 } else { i as u8 }, r)
   }
 
-  /// Generates an `f64` in the range [0.0, 1.0) and an updated instance of Self.<br/>
+  /// Generates an `f64` in the range [0.0, 1.0) and an updated instance of Self.
   ///
   /// # Returns
   /// * A tuple containing:
@@ -53,7 +51,7 @@ where
   ///   * An updated instance of Self
   fn next_f64(&self) -> (f64, Self) {
     let (i, r) = self.next_i64();
-    // 負の値を正の値に変換して、0.0から1.0未満の範囲に正規化
+    // Convert negative values to positive and normalize to range [0.0, 1.0)
     let normalized = if i < 0 {
       (-i as f64) / (i64::MAX as f64 + 1.0)
     } else {
@@ -62,7 +60,7 @@ where
     (normalized, r)
   }
 
-  /// Generates an `f32` in the range [0.0, 1.0) and an updated instance of Self.<br/>
+  /// Generates an `f32` in the range [0.0, 1.0) and an updated instance of Self.
   ///
   /// # Returns
   /// * A tuple containing:
@@ -70,7 +68,7 @@ where
   ///   * An updated instance of Self
   fn next_f32(&self) -> (f32, Self) {
     let (i, r) = self.next_i32();
-    // 負の値を正の値に変換して、0.0から1.0未満の範囲に正規化
+    // Convert negative values to positive and normalize to range [0.0, 1.0)
     let normalized = if i < 0 {
       (-i as f32) / (i32::MAX as f32 + 1.0)
     } else {
@@ -131,7 +129,6 @@ impl<T: NextRandValue> RandGen<T> for bool {
 }
 
 /// `RNG` is a random number generator.
-/// `RNG`は乱数生成器です。
 #[derive(Clone, Debug, PartialEq)]
 pub struct RNG {
   rng: Rc<RefCell<StdRng>>,
@@ -226,12 +223,12 @@ impl RNG {
   /// - For small sizes (< 50,000), it uses a direct StdRng implementation
   /// - For large sizes (>= 50,000), it uses parallel processing
   pub fn i32s(&self, count: u32) -> (Vec<i32>, Self) {
-    // 大きいサイズの場合は並列処理を使用
+    // Use parallel processing for large sizes
     if count >= 50_000 {
       return self.i32s_parallel(count);
     }
 
-    // 小さいサイズの場合は直接StdRngを使用
+    // Use direct StdRng for small sizes
     self.i32s_direct(count)
   }
 
@@ -256,7 +253,7 @@ impl RNG {
     use std::sync::{Arc, Mutex};
     use std::thread;
 
-    let num_threads = num_cpus::get().min(8); // スレッド数を制限
+    let num_threads = num_cpus::get().min(8); // Limit the number of threads
     let chunk_size = count / num_threads as u32;
     let remainder = count % num_threads as u32;
 
@@ -268,13 +265,13 @@ impl RNG {
       let result_clone = Arc::clone(&result);
       let mut thread_count = chunk_size;
 
-      // 最後のスレッドに余りを追加
+      // Add remainder to the last thread
       if i == num_threads - 1 {
         thread_count += remainder;
       }
 
       let handle = thread::spawn(move || {
-        let mut rng = StdRng::seed_from_u64(i as u64); // 各スレッドで異なるシード
+        let mut rng = StdRng::seed_from_u64(i as u64); // Different seed for each thread
         let mut local_result = Vec::with_capacity(thread_count as usize);
 
         for _ in 0..thread_count {
@@ -416,11 +413,11 @@ mod tests {
     let (value, new_rng) = rng.next_i64();
     assert!(value >= i64::MIN && value <= i64::MAX);
 
-    // 新しいRNGインスタンスが返されることを確認
-    // 内部状態が変わっていることを確認するため、別の方法でチェック
+    // Verify that a new RNG instance is returned
+    // Check in a different way to verify that the internal state has changed
     let (value1, _) = rng.next_i32();
     let (value2, _) = new_rng.next_i32();
-    // 同じシードから生成された異なるRNGインスタンスは異なる値を生成するはず
+    // Different RNG instances generated from the same seed should produce different values
     assert_ne!(value1, value2);
   }
 
@@ -510,7 +507,7 @@ mod tests {
     let rng1 = new_rng().with_seed(42);
     let rng2 = new_rng().with_seed(42);
 
-    // 同じシードで生成した値が同じであることを確認
+    // Verify that values generated with the same seed are identical
     let (v1, _) = rng1.next_i32();
     let (v2, _) = rng2.next_i32();
     assert_eq!(v1, v2);
@@ -552,7 +549,7 @@ mod tests {
     let (values, _) = rng.i32s(count);
     assert_eq!(values.len(), count as usize);
 
-    // すべての値が有効な範囲内にあることを確認
+    // Verify that all values are within valid range
     for value in values {
       assert!(value >= i32::MIN && value <= i32::MAX);
     }
@@ -571,7 +568,7 @@ mod tests {
   fn test_i32s_parallel() {
     init();
     let rng = new_rng();
-    let count = 50_000; // 並列処理のしきい値以上
+    let count = 50_000; // Above the threshold for parallel processing
     let (values, _) = rng.i32s_parallel(count);
     assert_eq!(values.len(), count as usize);
   }
@@ -618,18 +615,18 @@ mod tests {
     init();
     let rng = new_rng();
 
-    // 単一のRNG状態から値を生成
+    // Generate a value from a single RNG state
     let mut int_fn = RNG::int_value();
     let (original, rng2) = int_fn(rng);
 
-    // 同じ値を使用して変換関数をテスト
+    // Test the transformation function using the same value
     let mapped_value = original / 2;
 
-    // map関数をテスト
+    // Test the map function
     let mut map_fn = RNG::map(RNG::unit(original), |x| x / 2);
     let (value, _) = map_fn(rng2);
 
-    // 結果を検証
+    // Verify the result
     assert_eq!(value, mapped_value);
   }
 
@@ -683,6 +680,6 @@ mod tests {
     let mut int_fn = RNG::int_value();
     let mut flat_map_fn = RNG::flat_map(int_fn, |i| RNG::unit(i * 2));
     let (value, _) = flat_map_fn(rng);
-    assert!(value % 2 == 0); // 2の倍数であることを確認
+    assert!(value % 2 == 0); // Verify that it's a multiple of 2
   }
 }

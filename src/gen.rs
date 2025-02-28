@@ -176,32 +176,32 @@ impl Gens {
   pub fn frequency<B>(values: impl IntoIterator<Item = (u32, Gen<B>)>) -> Gen<B>
   where
     B: Debug + Clone + 'static, {
-    // 事前に容量を確保するためにVecを使用
+    // Using Vec to pre-allocate capacity
     let mut filtered = Vec::new();
     let mut total_weight = 0;
 
-    // 重みが0より大きい項目だけをフィルタリング
+    // Filter only items with weight greater than 0
     for (weight, value) in values.into_iter() {
       if weight > 0 {
         filtered.push((weight, value));
       }
     }
 
-    // BTreeMapを構築（累積重みをキーとして使用）
+    // Build BTreeMap (using cumulative weights as keys)
     let mut tree = BTreeMap::new();
     for (weight, value) in filtered {
       total_weight += weight;
       tree.insert(total_weight, value);
     }
 
-    // 空の場合はエラーを回避
+    // Avoid error if empty
     if total_weight == 0 {
       panic!("Empty frequency distribution");
     }
 
-    // 乱数を生成して対応する値を返す
+    // Generate a random number and return the corresponding value
     Self::choose_u32(1, total_weight).flat_map(move |n| {
-      // n以上の最小のキーを持つエントリを取得
+      // Get the entry with the smallest key greater than or equal to n
       let entry = tree.range(n..).next().unwrap();
       entry.1.clone()
     })
@@ -276,17 +276,17 @@ impl Gens {
       panic!("Chunk size must be greater than 0");
     }
 
-    // ベンチマーク結果に基づいて最適なチャンクサイズを計算
+    // Calculate optimal chunk size based on benchmark results
     let optimal_chunk_size = if n < 1000 {
-      // 小さいサイズの場合は指定されたチャンクサイズを使用
+      // For small sizes, use the specified chunk size
       chunk_size
     } else {
-      // ベンチマーク結果から、1000が最も効率的なチャンクサイズ
+      // From benchmark results, 1000 is the most efficient chunk size
       if chunk_size == usize::MAX {
-        // デフォルト値（usize::MAX）が指定された場合は1000を使用
+        // If the default value (usize::MAX) is specified, use 1000
         1000
       } else {
-        // 指定されたチャンクサイズを使用
+        // Use the specified chunk size
         chunk_size
       }
     };
@@ -295,16 +295,16 @@ impl Gens {
       let mut result = Vec::with_capacity(n);
       let mut current_rng = rng;
 
-      // チャンク単位で処理
+      // Process in chunks
       for chunk_start in (0..n).step_by(optimal_chunk_size) {
-        // 現在のチャンクのサイズを計算（最後のチャンクは小さくなる可能性がある）
+        // Calculate the size of the current chunk (the last chunk may be smaller)
         let current_chunk_size = std::cmp::min(optimal_chunk_size, n - chunk_start);
 
-        // チャンクサイズ分のStateを生成
+        // Generate States for the chunk size
         let mut chunk_states: Vec<State<RNG, B>> = Vec::with_capacity(current_chunk_size);
         chunk_states.resize_with(current_chunk_size, || gen.clone().sample);
 
-        // チャンクを処理
+        // Process the chunk
         let (chunk_result, new_rng) = State::sequence(chunk_states).run(current_rng);
         result.extend(chunk_result);
         current_rng = new_rng;
@@ -343,7 +343,7 @@ impl Gens {
       let mut result = Vec::with_capacity(n);
       let mut current_rng = rng;
 
-      // 遅延評価を使用して値を生成
+      // Generate values using lazy evaluation
       for _ in 0..n {
         let (value, new_rng) = gen.clone().run(current_rng);
         result.push(value);
@@ -588,15 +588,15 @@ impl Gens {
   /// let combined = Gens::one_of([small, large]);  // 50% chance of each range
   /// ```
   pub fn one_of<T: Choose + Clone + 'static>(values: impl IntoIterator<Item = Gen<T>>) -> Gen<T> {
-    // 直接Vecに変換
+    // Convert directly to Vec
     let vec: Vec<_> = values.into_iter().collect();
 
-    // 空の場合はエラーを回避
+    // Avoid error if empty
     if vec.is_empty() {
       panic!("Empty one_of distribution");
     }
 
-    // インデックスを選択して対応する値を返す
+    // Select an index and return the corresponding value
     Self::choose(0usize, vec.len() - 1).flat_map(move |idx| {
       let gen = &vec[idx as usize];
       gen.clone()
@@ -625,15 +625,15 @@ impl Gens {
   /// let numbers = Gens::one_of_values([1, 10, 100]);  // Equal probability for each number
   /// ```
   pub fn one_of_values<T: Choose + Clone + 'static>(values: impl IntoIterator<Item = T>) -> Gen<T> {
-    // 直接Vecに変換
+    // Convert directly to Vec
     let vec: Vec<_> = values.into_iter().collect();
 
-    // 空の場合はエラーを回避
+    // Avoid error if empty
     if vec.is_empty() {
       panic!("Empty one_of_values distribution");
     }
 
-    // インデックスを選択して対応する値を返す
+    // Select an index and return the corresponding value
     Self::choose(0usize, vec.len() - 1).map(move |idx| vec[idx as usize].clone())
   }
 
@@ -644,16 +644,16 @@ impl Gens {
 
   /// Generates a Gen that returns one randomly selected value from a specified maximum and minimum range of type char.
   pub fn choose_char(min: char, max: char) -> Gen<char> {
-    // 文字コードを使用して範囲を計算
+    // Calculate range using character codes
     let min_code = min as u32;
     let max_code = max as u32;
 
-    // 範囲が無効な場合はエラーを回避
+    // Avoid error if range is invalid
     if min_code > max_code {
       panic!("Invalid char range");
     }
 
-    // 文字コードの範囲から選択して文字に変換
+    // Select from character code range and convert to character
     Self::choose_u32(min_code, max_code).map(move |code| std::char::from_u32(code).unwrap_or(min))
   }
 
@@ -673,14 +673,14 @@ impl Gens {
       panic!("Invalid range: min > max");
     }
 
-    // 範囲の大きさを計算
+    // Calculate the size of the range
     let range = max - min + 1;
 
-    // オーバーフローを防ぐために絶対値を使用
+    // Use absolute value to prevent overflow
     Gen {
       sample: State::<RNG, i64>::new(move |rng: RNG| {
         let (n, new_rng) = rng.next_i64();
-        // 負の値を正の値に変換し、範囲内に収める
+        // Convert negative values to positive and keep within range
         let abs_n = if n < 0 { -n } else { n };
         let value = min + (abs_n % range);
         (value, new_rng)
@@ -712,14 +712,14 @@ impl Gens {
       panic!("Invalid range: min > max");
     }
 
-    // 範囲の大きさを計算
+    // Calculate the size of the range
     let range = max - min + 1;
 
-    // オーバーフローを防ぐために絶対値を使用
+    // Use absolute value to prevent overflow
     Gen {
       sample: State::<RNG, i32>::new(move |rng: RNG| {
         let (n, new_rng) = rng.next_i32();
-        // 負の値を正の値に変換し、範囲内に収める
+        // Convert negative values to positive and keep within range
         let abs_n = if n < 0 { -n } else { n };
         let value = min + (abs_n % range);
         (value, new_rng)
@@ -1218,7 +1218,7 @@ mod tests {
   #[test]
   fn test_list_of_n_chunked() {
     init();
-    // 小さなチャンクサイズでテスト
+    // Test with small chunk size
     let n = 100;
     let chunk_size = 10;
     let gen = Gens::one_i32();
@@ -1226,16 +1226,16 @@ mod tests {
 
     let (result, _) = chunked_gen.run(new_rng());
 
-    // 結果のサイズが正しいことを確認
+    // Verify the result size is correct
     assert_eq!(result.len(), n);
 
-    // 大きなチャンクサイズでテスト
+    // Test with large chunk size
     let large_chunk_size = 1000;
     let large_chunked_gen = Gens::list_of_n_chunked(n, large_chunk_size, gen);
 
     let (large_result, _) = large_chunked_gen.run(new_rng());
 
-    // 結果のサイズが正しいことを確認
+    // Verify the result size is correct
     assert_eq!(large_result.len(), n);
   }
 
@@ -1248,50 +1248,50 @@ mod tests {
 
     let (result, _) = lazy_gen.run(new_rng());
 
-    // 結果のサイズが正しいことを確認
+    // Verify the result size is correct
     assert_eq!(result.len(), n);
 
-    // 通常のlist_of_nと結果を比較
+    // Compare results with normal list_of_n
     let normal_gen = Gens::list_of_n(n, gen);
     let (normal_result, _) = normal_gen.run(new_rng().with_seed(42));
     let (lazy_result, _) = Gens::list_of_n_lazy(n, Gens::one_i32()).run(new_rng().with_seed(42));
 
-    // 同じシードを使用した場合、結果が同じであることを確認
+    // Verify that results are the same when using the same seed
     assert_eq!(normal_result, lazy_result);
   }
 
   #[test]
   fn test_large_data_generation() {
     init();
-    // 大量のデータを生成
+    // Generate large amount of data
     let n = 10000;
 
-    // 通常の方法
+    // Normal method
     let start_time = std::time::Instant::now();
     let gen = Gens::one_i32();
     let normal_gen = Gens::list_of_n(n, gen.clone());
     let (normal_result, _) = normal_gen.run(new_rng());
     let normal_duration = start_time.elapsed();
 
-    // チャンク処理を使用
+    // Using chunk processing
     let start_time = std::time::Instant::now();
     let chunk_size = 1000;
     let chunked_gen = Gens::list_of_n_chunked(n, chunk_size, gen.clone());
     let (chunked_result, _) = chunked_gen.run(new_rng());
     let chunked_duration = start_time.elapsed();
 
-    // 遅延評価を使用
+    // Using lazy evaluation
     let start_time = std::time::Instant::now();
     let lazy_gen = Gens::list_of_n_lazy(n, gen);
     let (lazy_result, _) = lazy_gen.run(new_rng());
     let lazy_duration = start_time.elapsed();
 
-    // 結果のサイズが正しいことを確認
+    // Verify the result size is correct
     assert_eq!(normal_result.len(), n);
     assert_eq!(chunked_result.len(), n);
     assert_eq!(lazy_result.len(), n);
 
-    // パフォーマンス情報をログに出力
+    // Log performance information
     log::info!("Normal generation time: {:?}", normal_duration);
     log::info!("Chunked generation time: {:?}", chunked_duration);
     log::info!("Lazy generation time: {:?}", lazy_duration);

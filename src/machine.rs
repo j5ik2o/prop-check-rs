@@ -1,35 +1,27 @@
 use crate::state::State;
 
-/// Input for the candy machine.<br/>
-/// キャンディマシンへの入力。
+/// Input for the candy machine.
 #[derive(Debug, Clone, Copy)]
 enum Input {
-  /// Insert a coin into the machine.<br/>
-  /// マシンにコインを投入する。
+  /// Insert a coin into the machine.
   Coin,
-  /// Turn the knob to get a candy.<br/>
-  /// キャンディを取得するためにノブを回す。
+  /// Turn the knob to get a candy.
   Turn,
 }
 
-/// Represents a candy machine state.<br/>
-/// キャンディマシンの状態を表す。
+/// Represents a candy machine state.
 #[derive(Debug, Clone, Copy, Default)]
 struct Machine {
-  /// Whether the machine is locked.<br/>
-  /// マシンがロックされているかどうか。
+  /// Whether the machine is locked.
   locked: bool,
-  /// Number of candies in the machine.<br/>
-  /// マシン内のキャンディの数。
+  /// Number of candies in the machine.
   candies: i32,
-  /// Number of coins in the machine.<br/>
-  /// マシン内のコインの数。
+  /// Number of coins in the machine.
   coins: i32,
 }
 
 impl Machine {
-  /// Simulates the candy machine with a sequence of inputs.<br/>
-  /// 一連の入力でキャンディマシンをシミュレートする。
+  /// Simulates the candy machine with a sequence of inputs.
   ///
   /// # Arguments
   /// * `inputs` - A vector of inputs to the machine.
@@ -50,8 +42,7 @@ impl Machine {
     result.flat_map(|_| State::<Machine, Machine>::get().map(|s: Machine| (s.coins, s.candies)))
   }
 
-  /// Creates a function that updates the machine state based on input.<br/>
-  /// 入力に基づいてマシンの状態を更新する関数を作成する。
+  /// Creates a function that updates the machine state based on input.
   ///
   /// # Returns
   /// * `Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>>` - A function that takes an input and returns a function that updates the machine state.
@@ -60,15 +51,15 @@ impl Machine {
       Box::new(move |s: Machine| {
         match (i, s) {
           // Inserting a coin into an unlocked machine does nothing
-          // ロックされていないマシンにコインを入れても何も起こらない
+          // Inserting a coin into an unlocked machine does nothing
           // (Coin, Machine { locked: false, .. }) => s.clone(),
 
           // Turning the knob on a locked machine does nothing
-          // ロックされたマシンのノブを回しても何も起こらない
+          // Turning the knob on a locked machine does nothing
           // (Turn, Machine { locked: true, .. }) => s.clone(),
 
           // Inserting a coin into a locked machine unlocks it if there are candies
-          // ロックされたマシンにコインを入れると、キャンディがある場合はロックが解除される
+          // Inserting a coin into a locked machine unlocks it if there are candies
           (
             Input::Coin,
             Machine {
@@ -83,7 +74,7 @@ impl Machine {
           },
 
           // Turning the knob on an unlocked machine dispenses a candy and locks the machine
-          // ロックされていないマシンのノブを回すと、キャンディが出てマシンがロックされる
+          // Turning the knob on an unlocked machine dispenses a candy and locks the machine
           (
             Input::Turn,
             Machine {
@@ -98,7 +89,7 @@ impl Machine {
           },
 
           // Any other action does nothing
-          // その他のアクションは何も起こらない
+          // Any other action does nothing
           (_, Machine { .. }) => s.clone(),
         }
       })
