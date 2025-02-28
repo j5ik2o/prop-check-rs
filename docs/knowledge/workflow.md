@@ -6,7 +6,7 @@
 
 1. **コード編集**
    - コードの変更は、明確な目的を持って行う
-   - コーディング規約に従う（docs/knowledge/programming.md 参照）
+   - コーディング規約に従う（[programming.md](programming.md) 参照）
    - 変更は小さく、理解しやすい単位で行う
 
 2. **テスト実行**
@@ -16,15 +16,13 @@
 
 3. **適切な粒度での git commit**
    - 論理的に関連する変更をまとめてコミットする
-   - コミットメッセージは英語で書き、Conventional Commits の規約に従う
+   - コミットメッセージは[common.md](common.md)のバージョン管理ルールに従う
    - 例: `fix: correct rustdoc formatting in gen module`
    - 例: `feat: add new generator for custom types`
    - 例: `docs: update workflow documentation`
 
 4. **ナレッジの文書化**
-   - 作業中に獲得した知識は `docs/` 以下に適切に記録する
-   - 既存のドキュメントを更新するか、新しいドキュメントを作成する
-   - ドキュメントは明確で、後から参照しやすいように構造化する
+   - 作業中に獲得した知識は[common.md](common.md)のナレッジ管理ルールに従って記録する
 
 ## 具体的なタスク実行例
 
