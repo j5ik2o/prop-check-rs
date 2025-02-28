@@ -7,12 +7,15 @@ where
   /// Generate a single random value of this type.
   ///
   /// # Returns
-  /// * `Gen<Self>` - A generator that produces a random value of this type.
+  /// - `Gen<Self>` - A generator that produces a random value of this type.
   fn one() -> Gen<Self>;
 }
 
 impl One for i64 {
   /// Generate a single random i64 value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random i64 value.
   fn one() -> Gen<Self> {
     Gens::one_i64()
   }
@@ -20,6 +23,9 @@ impl One for i64 {
 
 impl One for u64 {
   /// Generate a single random u64 value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random u64 value.
   fn one() -> Gen<Self> {
     Gens::one_u64()
   }
@@ -27,6 +33,9 @@ impl One for u64 {
 
 impl One for i32 {
   /// Generate a single random i32 value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random i32 value.
   fn one() -> Gen<Self> {
     Gens::one_i32()
   }
@@ -34,6 +43,9 @@ impl One for i32 {
 
 impl One for u32 {
   /// Generate a single random u32 value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random u32 value.
   fn one() -> Gen<Self> {
     Gens::one_u32()
   }
@@ -41,6 +53,9 @@ impl One for u32 {
 
 impl One for i16 {
   /// Generate a single random i16 value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random i16 value.
   fn one() -> Gen<Self> {
     Gens::one_i16()
   }
@@ -48,6 +63,9 @@ impl One for i16 {
 
 impl One for u16 {
   /// Generate a single random u16 value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random u16 value.
   fn one() -> Gen<Self> {
     Gens::one_u16()
   }
@@ -55,6 +73,9 @@ impl One for u16 {
 
 impl One for i8 {
   /// Generate a single random i8 value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random i8 value.
   fn one() -> Gen<Self> {
     Gens::one_i8()
   }
@@ -62,6 +83,9 @@ impl One for i8 {
 
 impl One for u8 {
   /// Generate a single random u8 value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random u8 value.
   fn one() -> Gen<Self> {
     Gens::one_u8()
   }
@@ -69,6 +93,9 @@ impl One for u8 {
 
 impl One for char {
   /// Generate a single random char value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random char value.
   fn one() -> Gen<Self> {
     Gens::one_char()
   }
@@ -76,6 +103,9 @@ impl One for char {
 
 impl One for bool {
   /// Generate a single random bool value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random bool value.
   fn one() -> Gen<Self> {
     Gens::one_bool()
   }
@@ -83,6 +113,9 @@ impl One for bool {
 
 impl One for f64 {
   /// Generate a single random f64 value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random f64 value.
   fn one() -> Gen<Self> {
     Gens::one_f64()
   }
@@ -90,6 +123,9 @@ impl One for f64 {
 
 impl One for f32 {
   /// Generate a single random f32 value.
+  ///
+  /// # Returns
+  /// - `Gen<Self>` - A generator that produces a random f32 value.
   fn one() -> Gen<Self> {
     Gens::one_f32()
   }

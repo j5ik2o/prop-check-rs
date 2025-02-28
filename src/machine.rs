@@ -24,10 +24,10 @@ impl Machine {
   /// Simulates the candy machine with a sequence of inputs.
   ///
   /// # Arguments
-  /// * `inputs` - A vector of inputs to the machine.
+  /// - `inputs` - A vector of inputs to the machine.
   ///
   /// # Returns
-  /// * `State<Machine, (i32, i32)>` - A state monad that returns a tuple of coins and candies.
+  /// - `State<Machine, (i32, i32)>` - A state monad that returns a tuple of coins and candies.
   fn simulate_machine(inputs: Vec<Input>) -> State<Machine, (i32, i32)> {
     let xs = inputs
       .into_iter()
@@ -45,7 +45,7 @@ impl Machine {
   /// Creates a function that updates the machine state based on input.
   ///
   /// # Returns
-  /// * `Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>>` - A function that takes an input and returns a function that updates the machine state.
+  /// - `Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>>` - A function that takes an input and returns a function that updates the machine state.
   fn update() -> Box<dyn Fn(Input) -> Box<dyn Fn(Machine) -> Machine>> {
     Box::new(move |i: Input| {
       Box::new(move |s: Machine| {

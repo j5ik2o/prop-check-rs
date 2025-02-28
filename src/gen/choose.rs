@@ -7,11 +7,11 @@ where
   /// Choose a random value between min and max (inclusive).
   ///
   /// # Arguments
-  /// * `min` - The minimum value (inclusive).
-  /// * `max` - The maximum value (inclusive).
+  /// - `min` - The minimum value (inclusive).
+  /// - `max` - The maximum value (inclusive).
   ///
   /// # Returns
-  /// * `Gen<Self>` - A generator that produces random values in the specified range.
+  /// - `Gen<Self>` - A generator that produces random values in the specified range.
   fn choose(min: Self, max: Self) -> Gen<Self>;
 }
 
@@ -22,11 +22,11 @@ where
   /// Choose a random value between min and max for Option types.
   ///
   /// # Arguments
-  /// * `min` - The minimum value (inclusive).
-  /// * `max` - The maximum value (inclusive).
+  /// - `min` - The minimum value (inclusive).
+  /// - `max` - The maximum value (inclusive).
   ///
   /// # Returns
-  /// * `Gen<Self>` - A generator that produces random Option values.
+  /// - `Gen<Self>` - A generator that produces random Option values.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     match (min, max) {
       (Some(mn), Some(mx)) => Gens::choose(mn, mx).map(Some),
@@ -45,11 +45,11 @@ where
   /// Choose a random value between min and max for Result types.
   ///
   /// # Arguments
-  /// * `min` - The minimum value (inclusive).
-  /// * `max` - The maximum value (inclusive).
+  /// - `min` - The minimum value (inclusive).
+  /// - `max` - The maximum value (inclusive).
   ///
   /// # Returns
-  /// * `Gen<Self>` - A generator that produces random Result values.
+  /// - `Gen<Self>` - A generator that produces random Result values.
   fn choose(min: Self, max: Self) -> Gen<Self> {
     match (min, max) {
       (Ok(mn), Ok(mx)) => Gens::choose(mn, mx).map(Ok),

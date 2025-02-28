@@ -18,7 +18,7 @@ impl Gens {
   /// Generates a Gen that returns `()`.
   ///
   /// # Returns
-  /// * A `Gen<()>` that generates the unit value
+  /// - A `Gen<()>` that generates the unit value
   pub fn unit() -> Gen<()> {
     Self::pure(())
   }
@@ -26,10 +26,10 @@ impl Gens {
   /// Generates a Gen that returns a constant value.
   ///
   /// # Arguments
-  /// * `value` - The value to be wrapped in a Gen
+  /// - `value` - The value to be wrapped in a Gen
   ///
   /// # Returns
-  /// * A `Gen<B>` that always generates the provided value
+  /// - A `Gen<B>` that always generates the provided value
   pub fn pure<B>(value: B) -> Gen<B>
   where
     B: Clone + 'static, {
@@ -39,10 +39,10 @@ impl Gens {
   /// Generates a Gen that returns a value from a lazily evaluated function.
   ///
   /// # Arguments
-  /// * `f` - A closure that produces the value when called
+  /// - `f` - A closure that produces the value when called
   ///
   /// # Returns
-  /// * A `Gen<B>` that generates the value by calling the provided function
+  /// - A `Gen<B>` that generates the value by calling the provided function
   ///
   /// # Examples
   /// ```
@@ -63,13 +63,13 @@ impl Gens {
   /// Generates a Gen that wraps the value of another Gen in Some.
   ///
   /// # Arguments
-  /// * `gen` - The Gen whose values will be wrapped in Some
+  /// - `gen` - The Gen whose values will be wrapped in Some
   ///
   /// # Returns
-  /// * A `Gen<Option<B>>` that always generates Some containing the value from the input Gen
+  /// - A `Gen<Option<B>>` that always generates Some containing the value from the input Gen
   ///
   /// # Type Parameters
-  /// * `B` - The type of value to be wrapped in Some, must implement Clone and have a 'static lifetime
+  /// - `B` - The type of value to be wrapped in Some, must implement Clone and have a 'static lifetime
   ///
   /// # Examples
   /// ```
@@ -87,13 +87,13 @@ impl Gens {
   /// The probability distribution is 90% for Some and 10% for None.
   ///
   /// # Arguments
-  /// * `gen` - The Gen to be wrapped in an Option
+  /// - `gen` - The Gen to be wrapped in an Option
   ///
   /// # Returns
-  /// * A `Gen<Option<B>>` that generates Some(value) 90% of the time and None 10% of the time
+  /// - A `Gen<Option<B>>` that generates Some(value) 90% of the time and None 10% of the time
   ///
   /// # Type Parameters
-  /// * `B` - The type of value to be generated, must implement Debug, Clone and have a 'static lifetime
+  /// - `B` - The type of value to be generated, must implement Debug, Clone and have a 'static lifetime
   pub fn option<B>(gen: Gen<B>) -> Gen<Option<B>>
   where
     B: Debug + Clone + 'static, {
@@ -103,15 +103,15 @@ impl Gens {
   /// Generates a Gen that produces a Result type by combining two Gens.
   ///
   /// # Arguments
-  /// * `gt` - The Gen that produces the Ok variant values
-  /// * `ge` - The Gen that produces the Err variant values
+  /// - `gt` - The Gen that produces the Ok variant values
+  /// - `ge` - The Gen that produces the Err variant values
   ///
   /// # Returns
-  /// * A `Gen<Result<T, E>>` that randomly generates either Ok(T) or Err(E)
+  /// - A `Gen<Result<T, E>>` that randomly generates either Ok(T) or Err(E)
   ///
   /// # Type Parameters
-  /// * `T` - The success type, must implement Choose, Clone and have a 'static lifetime
-  /// * `E` - The error type, must implement Clone and have a 'static lifetime
+  /// - `T` - The success type, must implement Choose, Clone and have a 'static lifetime
+  /// - `E` - The error type, must implement Clone and have a 'static lifetime
   ///
   /// # Examples
   /// ```
@@ -130,16 +130,16 @@ impl Gens {
   /// Generates a Gen that produces values according to specified weights.
   ///
   /// # Arguments
-  /// * `values` - An iterator of tuples where the first element is the weight (u32) and
+  /// - `values` - An iterator of tuples where the first element is the weight (u32) and
   ///             the second element is the value to be generated. The probability of each
   ///             value being generated is proportional to its weight.
   ///
   /// # Returns
-  /// * A `Gen<B>` that generates values with probabilities determined by their weights
+  /// - A `Gen<B>` that generates values with probabilities determined by their weights
   ///
   /// # Panics
-  /// * Panics if all weights are 0
-  /// * Panics if no values are provided
+  /// - Panics if all weights are 0
+  /// - Panics if no values are provided
   ///
   /// # Examples
   /// ```
@@ -158,21 +158,21 @@ impl Gens {
   /// Generates a Gen that produces values from other Gens according to specified weights.
   ///
   /// # Arguments
-  /// * `values` - An iterator of tuples where the first element is the weight (u32) and
+  /// - `values` - An iterator of tuples where the first element is the weight (u32) and
   ///             the second element is another Gen. The probability of each Gen being
   ///             chosen is proportional to its weight.
   ///
   /// # Returns
-  /// * A `Gen<B>` that generates values by selecting and running other Gens based on their weights
+  /// - A `Gen<B>` that generates values by selecting and running other Gens based on their weights
   ///
   /// # Panics
-  /// * Panics if all weights are 0
-  /// * Panics if no values are provided
+  /// - Panics if all weights are 0
+  /// - Panics if no values are provided
   ///
   /// # Implementation Notes
-  /// * Uses a BTreeMap for efficient weighted selection
-  /// * Filters out entries with zero weight
-  /// * Maintains cumulative weights for probability calculations
+  /// - Uses a BTreeMap for efficient weighted selection
+  /// - Filters out entries with zero weight
+  /// - Maintains cumulative weights for probability calculations
   pub fn frequency<B>(values: impl IntoIterator<Item = (u32, Gen<B>)>) -> Gen<B>
   where
     B: Debug + Clone + 'static, {
@@ -210,15 +210,15 @@ impl Gens {
   /// Generates a Gen that produces a vector of n values generated by another Gen.
   ///
   /// # Arguments
-  /// * `n` - The number of values to generate
-  /// * `gen` - The Gen used to generate each value
+  /// - `n` - The number of values to generate
+  /// - `gen` - The Gen used to generate each value
   ///
   /// # Returns
-  /// * A `Gen<Vec<B>>` that generates a vector containing n values
+  /// - A `Gen<Vec<B>>` that generates a vector containing n values
   ///
   /// # Performance
-  /// * Uses lazy evaluation internally for better memory efficiency
-  /// * For large n (>= 1000), consider using `list_of_n_chunked` or `list_of_n_chunked_optimal`
+  /// - Uses lazy evaluation internally for better memory efficiency
+  /// - For large n (>= 1000), consider using `list_of_n_chunked` or `list_of_n_chunked_optimal`
   ///   which may provide better performance through chunk-based processing
   ///
   /// # Examples
@@ -245,23 +245,23 @@ impl Gens {
   /// Generates a Gen that produces a vector of values using chunk-based processing for better performance.
   ///
   /// # Arguments
-  /// * `n` - The number of values to generate
-  /// * `chunk_size` - The size of chunks for batch processing. For optimal performance:
+  /// - `n` - The number of values to generate
+  /// - `chunk_size` - The size of chunks for batch processing. For optimal performance:
   ///                  - Use 1000 for large n (>= 1000)
   ///                  - For smaller n, the provided chunk_size is used as is
-  /// * `gen` - The Gen used to generate each value
+  /// - `gen` - The Gen used to generate each value
   ///
   /// # Returns
-  /// * A `Gen<Vec<B>>` that generates a vector containing n values
+  /// - A `Gen<Vec<B>>` that generates a vector containing n values
   ///
   /// # Panics
-  /// * Panics if chunk_size is 0
+  /// - Panics if chunk_size is 0
   ///
   /// # Performance Notes
-  /// * Processes values in chunks to reduce memory allocation overhead
-  /// * Automatically adjusts chunk size based on total number of elements
-  /// * More efficient than `list_of_n` for large datasets
-  /// * Consider using `list_of_n_chunked_optimal` for automatic chunk size optimization
+  /// - Processes values in chunks to reduce memory allocation overhead
+  /// - Automatically adjusts chunk size based on total number of elements
+  /// - More efficient than `list_of_n` for large datasets
+  /// - Consider using `list_of_n_chunked_optimal` for automatic chunk size optimization
   ///
   /// # Examples
   /// ```
@@ -317,18 +317,18 @@ impl Gens {
   /// Generates a Gen that produces a vector of values using lazy evaluation.
   ///
   /// # Arguments
-  /// * `n` - The number of values to generate
-  /// * `gen` - The Gen used to generate each value
+  /// - `n` - The number of values to generate
+  /// - `gen` - The Gen used to generate each value
   ///
   /// # Returns
-  /// * A `Gen<Vec<B>>` that generates a vector containing n values
+  /// - A `Gen<Vec<B>>` that generates a vector containing n values
   ///
   /// # Performance Notes
-  /// * Uses lazy evaluation to generate values one at a time
-  /// * Minimizes memory usage by not pre-allocating all states
-  /// * More memory efficient than eager evaluation for large n
-  /// * May be slower than chunk-based processing for very large datasets
-  /// * Maintains consistent memory usage regardless of n
+  /// - Uses lazy evaluation to generate values one at a time
+  /// - Minimizes memory usage by not pre-allocating all states
+  /// - More memory efficient than eager evaluation for large n
+  /// - May be slower than chunk-based processing for very large datasets
+  /// - Maintains consistent memory usage regardless of n
   ///
   /// # Examples
   /// ```
@@ -357,14 +357,14 @@ impl Gens {
   /// Generates a Gen that returns a single value using the One trait.
   ///
   /// # Type Parameters
-  /// * `T` - The type that implements the One trait
+  /// - `T` - The type that implements the One trait
   ///
   /// # Returns
-  /// * A `Gen<T>` that generates values using the One trait implementation
+  /// - A `Gen<T>` that generates values using the One trait implementation
   ///
   /// # Implementation Notes
-  /// * Uses the `one()` method from the One trait to generate values
-  /// * Useful for types that have a natural "one" or "unit" value
+  /// - Uses the `one()` method from the One trait to generate values
+  /// - Useful for types that have a natural "one" or "unit" value
   ///
   /// # Examples
   /// ```
@@ -379,7 +379,7 @@ impl Gens {
   /// Generates a Gen that produces random i64 values.
   ///
   /// # Returns
-  /// * A `Gen<i64>` that generates random 64-bit signed integers
+  /// - A `Gen<i64>` that generates random 64-bit signed integers
   ///
   /// # Examples
   /// ```
@@ -395,7 +395,7 @@ impl Gens {
   /// Generates a Gen that produces random u64 values.
   ///
   /// # Returns
-  /// * A `Gen<u64>` that generates random 64-bit unsigned integers
+  /// - A `Gen<u64>` that generates random 64-bit unsigned integers
   ///
   /// # Examples
   /// ```
@@ -411,7 +411,7 @@ impl Gens {
   /// Generates a Gen that produces random i32 values.
   ///
   /// # Returns
-  /// * A `Gen<i32>` that generates random 32-bit signed integers
+  /// - A `Gen<i32>` that generates random 32-bit signed integers
   ///
   /// # Examples
   /// ```
@@ -427,7 +427,7 @@ impl Gens {
   /// Generates a Gen that produces random u32 values.
   ///
   /// # Returns
-  /// * A `Gen<u32>` that generates random 32-bit unsigned integers
+  /// - A `Gen<u32>` that generates random 32-bit unsigned integers
   ///
   /// # Examples
   /// ```
