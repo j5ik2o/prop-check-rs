@@ -22,7 +22,7 @@ num_cpus = "1.16.0"
 [dev-dependencies]
 env_logger = "0.11.3"
 ctor = "0.4.0"
-criterion = "0.6.0"
+criterion = "0.7.0"
 num_cpus = "1.16.0"
 
 [[bench]]
