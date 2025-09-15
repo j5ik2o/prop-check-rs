@@ -1,6 +1,6 @@
 [package]
 name = "prop-check-rs"
-version = "0.0.864"
+version = "0.0.963"
 authors = ["Junichi Kato <j5ik2o@gmail.com>"]
 description = "A Property-based testing Library in Rust"
 repository="https://github.com/j5ik2o/prop-check-rs"
@@ -21,8 +21,8 @@ num_cpus = "1.16.0"
 
 [dev-dependencies]
 env_logger = "0.11.3"
-ctor = "0.4.0"
-criterion = "0.5.1"
+ctor = "0.5.0"
+criterion = "0.7.0"
 num_cpus = "1.16.0"
 
 [[bench]]
