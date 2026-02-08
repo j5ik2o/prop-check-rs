@@ -14,7 +14,7 @@ github = { repository = "j5ik2o/prop-check-rs", workflow = "ci" }
 
 [dependencies]
 log = "0.4.21"
-rand = "0.9.0"
+rand = "0.10.0"
 bigdecimal = "0.4.3"
 anyhow = "1.0.82"
 num_cpus = "1.16.0"
