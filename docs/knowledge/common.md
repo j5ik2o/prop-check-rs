@@ -9,7 +9,7 @@
 
 ## バージョン管理
 
-- TODO管理はGitHub Issueを使用して行う
+- TODO管理はGitHub Issueを使用して行う(ghコマンドを使ってください)
 - git commitのメッセージは英語で書き、Conventional Commitsの規約に従う
   - 例: `fix:`, `feat:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`
   - 詳細なコミットルールは[workflow.md](workflow.md)を参照
